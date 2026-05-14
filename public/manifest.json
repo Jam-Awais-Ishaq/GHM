@@ -1,0 +1,9 @@
+{
+  "name": "Guess How Much?",
+  "short_name": "GHM",
+  "description": "Community-ranked cheap eats near you.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#FF5722"
+}
