@@ -352,7 +352,7 @@ export function MapFilterFeedsModal({
           </section>
         </div>
 
-        <footer className="shrink-0 max-sm:bg-white max-sm:px-3 max-sm:pt-2.5 max-sm:pb-[max(0.375rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pt-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <footer className="shrink-0 max-sm:bg-white max-sm:px-3 max-sm:pt-2.5 max-sm:pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] sm:px-6 sm:pt-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={() => {
@@ -361,7 +361,7 @@ export function MapFilterFeedsModal({
             }}
             className={cn(
               "flex w-full items-center justify-center text-white transition hover:brightness-[1.03] active:scale-[0.99]",
-              "max-sm:h-10 max-sm:rounded-2xl max-sm:text-[13px] max-sm:font-medium max-sm:leading-snug max-sm:tracking-[-0.01em] max-sm:shadow-[0_3px_12px_rgba(255,87,34,0.32)] sm:h-12 sm:rounded-2xl sm:text-[15px] sm:font-semibold sm:leading-snug sm:tracking-[-0.01em] sm:shadow-[0_4px_14px_rgba(255,87,34,0.38)]",
+              "max-sm:h-14 max-sm:rounded-2xl max-sm:text-[14px] max-sm:font-semibold max-sm:leading-snug max-sm:tracking-[-0.01em] max-sm:shadow-[0_3px_12px_rgba(255,87,34,0.32)] sm:h-12 sm:rounded-2xl sm:text-[15px] sm:font-semibold sm:leading-snug sm:tracking-[-0.01em] sm:shadow-[0_4px_14px_rgba(255,87,34,0.38)]",
             )}
             style={{ backgroundColor: ACCENT }}
           >

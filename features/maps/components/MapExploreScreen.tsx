@@ -182,7 +182,7 @@ export function MapExploreScreen() {
             ref={searchFieldRef}
             className="relative col-start-1 row-start-1 min-w-0 w-full max-sm:max-w-[11.5rem] max-sm:justify-self-start sm:max-w-none sm:w-52 sm:shrink-0 md:w-60"
           >
-            <Search className="pointer-events-none absolute left-3 top-1/2 z-[2] h-[17px] w-[17px] -translate-y-1/2 text-neutral-400 max-sm:left-2 max-sm:h-4 max-sm:w-4" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 z-[2] h-[17px] w-[17px] -translate-y-1/2 text-neutral-400 max-sm:left-3 max-sm:h-[17px] max-sm:w-[17px]" />
             <input
               type="text"
               role="searchbox"
@@ -197,7 +197,7 @@ export function MapExploreScreen() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={cn(
-                "relative z-[1] box-border h-9 w-full border-0 bg-neutral-100 py-0 pl-9 pr-3 text-sm leading-9 text-neutral-800 outline-none ring-0 transition placeholder:text-neutral-500 focus:bg-white focus:ring-2 focus:ring-[#FF5722]/25 max-sm:h-8 max-sm:pl-8 max-sm:pr-2 max-sm:text-xs max-sm:leading-8 sm:h-10 sm:leading-10",
+                "relative z-[1] box-border h-9 w-full border-0 bg-neutral-100 py-0 pl-9 pr-3 text-sm leading-9 text-neutral-800 outline-none ring-0 transition placeholder:text-neutral-500 focus:bg-white focus:ring-2 focus:ring-[#FF5722]/25 max-sm:h-[2.375rem] max-sm:pl-9 max-sm:pr-2.5 max-sm:text-[13px] max-sm:leading-[2.375rem] sm:h-10 sm:leading-10",
                 MAP_HEADER_CONTROL_ROUNDED,
               )}
             />
@@ -208,7 +208,7 @@ export function MapExploreScreen() {
               type="button"
               onClick={() => setFilterModalOpen(true)}
               className={cn(
-                "flex h-9 shrink-0 items-center gap-1.5 bg-neutral-100 px-2.5 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-200/90 max-sm:h-8 max-sm:gap-1 max-sm:px-2 max-sm:text-[11px] sm:h-10 sm:px-3",
+                "flex h-9 shrink-0 items-center gap-1.5 bg-neutral-100 px-2.5 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-200/90 max-sm:h-[2.375rem] max-sm:gap-1 max-sm:px-2.5 max-sm:text-[11px] sm:h-10 sm:px-3",
                 MAP_HEADER_CONTROL_ROUNDED,
               )}
               aria-label="Open filters"
@@ -219,12 +219,12 @@ export function MapExploreScreen() {
             <button
               type="button"
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200/90 max-sm:h-8 max-sm:w-8 sm:h-10 sm:w-10",
+                "flex h-9 w-9 shrink-0 items-center justify-center bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200/90 max-sm:h-[2.375rem] max-sm:w-[2.375rem] sm:h-10 sm:w-10",
                 MAP_HEADER_CONTROL_ROUNDED,
               )}
               aria-label="Account"
             >
-              <User className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} />
+              <User className="h-5 w-5" strokeWidth={2} />
             </button>
           </div>
 
@@ -235,7 +235,7 @@ export function MapExploreScreen() {
                 type="button"
                 onClick={() => setActivePriceFilter(chip.id)}
                 className={cn(
-                  "shrink-0 px-2.5 py-1.5 text-[11px] font-semibold text-neutral-700 sm:px-3 sm:py-2 sm:text-xs",
+                  "shrink-0 px-2.5 py-1.5 text-[11px] font-semibold text-neutral-700 max-sm:px-3 max-sm:py-2 max-sm:text-xs sm:px-3 sm:py-2 sm:text-xs",
                   MAP_HEADER_CONTROL_ROUNDED,
                   activePriceFilter === chip.id
                     ? "bg-neutral-300 text-neutral-900 shadow-inner"
