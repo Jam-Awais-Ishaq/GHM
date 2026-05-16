@@ -166,8 +166,18 @@ export function filterRestaurants(
   activeCuisine: CuisineFilterId = "all",
   showOnlyFeeds: ShowOnlyFeedsId = "all",
 ): Restaurant[] {
-  let next = applyPriceFilter(list, activePriceFilter);
-  next = applyCuisineFilter(next, activeCuisine);
+  const priceFromApi =
+    activePriceFilter === "u15" ||
+    activePriceFilter === "u12" ||
+    activePriceFilter === "u8" ||
+    activePriceFilter === "u5";
+  const cuisineFromApi = activeCuisine !== "all" && priceFromApi;
+
+  let next = priceFromApi ? list : applyPriceFilter(list, activePriceFilter);
+  next =
+    activeCuisine === "all" || cuisineFromApi
+      ? next
+      : applyCuisineFilter(next, activeCuisine);
   next = applyShowOnlyFilter(next, showOnlyFeeds);
   const q = searchQuery.trim();
   const center: LatLng | null = searchLocation

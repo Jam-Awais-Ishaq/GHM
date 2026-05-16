@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ThumbsUp } from "lucide-react";
 
-import { formatPriceCompact } from "@/lib/utils/formatCurrency";
+import { RestaurantImage } from "@/features/restaurants/components/RestaurantImage";
 import { formatDistanceKm } from "@/features/restaurants/utils/distance";
 import type { RestaurantWithDistance } from "@/features/restaurants/types/restaurant";
+import { formatPriceCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils/cn";
 
 type RestaurantPreviewCardProps = {
@@ -21,8 +22,8 @@ const THUMB_MAP_COMPACT = cn(
   "size-[5rem] shrink-0 rounded-lg bg-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] sm:size-[5.5rem]",
 );
 
-/** Hide distance only when clearly bogus (not when user/off-map GPS is far away). */
-const MAX_DISPLAY_DISTANCE_KM = 8000;
+/** Hide distance only when clearly bogus (half-earth+ still shown). */
+const MAX_DISPLAY_DISTANCE_KM = 20_000;
 
 const cardShellClass =
   "flex w-full gap-3 rounded-2xl border border-neutral-100/90 bg-white p-3.5 text-left shadow-[0_12px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04] transition hover:bg-neutral-50/95 active:scale-[0.99]";
@@ -58,7 +59,18 @@ export function RestaurantPreviewCard({
 
   const inner = compact ? (
     <>
-      <div className={cn(THUMB_MAP_COMPACT, "self-start overflow-hidden sm:self-center")} aria-hidden />
+      <div
+        className={cn(
+          THUMB_MAP_COMPACT,
+          "relative self-start overflow-hidden bg-gradient-to-br from-neutral-200 to-neutral-300 sm:self-center",
+        )}
+      >
+        <RestaurantImage
+          src={restaurant.imageUrl}
+          alt={restaurant.name}
+          sizes="(max-width: 640px) 80px, 88px"
+        />
+      </div>
       <div className="flex min-h-[5rem] min-w-0 flex-1 flex-col justify-center gap-1.5 sm:min-h-[5.5rem] sm:gap-0.5">
         <div className="flex flex-row items-start justify-between gap-x-2.5">
           <h2 className="line-clamp-2 min-w-0 flex-1 text-left text-[15px] font-semibold leading-snug tracking-[-0.01em] text-neutral-900">
@@ -81,10 +93,9 @@ export function RestaurantPreviewCard({
     </>
   ) : (
     <>
-      <div
-        className="h-16 w-16 shrink-0 rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-300"
-        aria-hidden
-      />
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-300">
+        <RestaurantImage src={restaurant.imageUrl} alt={restaurant.name} sizes="64px" />
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h2 className="truncate font-semibold text-neutral-900">{restaurant.name}</h2>

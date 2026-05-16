@@ -27,6 +27,8 @@ export type Restaurant = {
   price: number;
   suburb: string;
   address: string;
+  /** Restaurant photo URL (e.g. Cloudinary). */
+  imageUrl?: string | null;
   position: LatLng;
   netScore: number;
   worthIt: number;

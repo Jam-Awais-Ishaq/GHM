@@ -15,6 +15,7 @@ import {
 import { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { RestaurantImage } from "@/features/restaurants/components/RestaurantImage";
 import type { RestaurantWithDistance } from "@/features/restaurants/types/restaurant";
 import { formatDistanceKm } from "@/features/restaurants/utils/distance";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
 /** Above this, distance is treated as unreliable (bad GPS / wrong hemisphere). */
-const MAX_DISPLAY_DISTANCE_KM = 8000;
+const MAX_DISPLAY_DISTANCE_KM = 20_000;
 
 export type SidePanelAnchor = { topPx: number };
 
@@ -112,6 +113,12 @@ export function MapRestaurantSidePanel({
               docked && "max-sm:rounded-none sm:rounded-t-[28px]",
             )}
           >
+            <RestaurantImage
+              src={r.imageUrl}
+              alt={r.name}
+              priority
+              sizes="(max-width: 640px) 100vw, 400px"
+            />
             <div className="absolute left-3 right-3 top-3 z-[1] flex items-start justify-between gap-2">
               <button
                 type="button"

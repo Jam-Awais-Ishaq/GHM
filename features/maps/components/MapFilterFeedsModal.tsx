@@ -1,16 +1,16 @@
 "use client";
 
 import { Check, Flame, Star, X } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { PRICE_FILTER_CHIPS } from "@/constants/filters";
-import { filterRestaurants } from "@/features/restaurants/store/mapExplore.store";
+import { useFilterFeedsPreview } from "@/features/maps/hooks/useFilterFeedsPreview";
 import type { SearchLocationHit } from "@/features/restaurants/store/mapExplore.store";
 import type {
   CuisineFilterId,
+  LatLng,
   PriceFilterId,
-  Restaurant,
   ShowOnlyFeedsId,
 } from "@/features/restaurants/types/restaurant";
 import { cn } from "@/lib/utils/cn";
@@ -163,7 +163,7 @@ export type MapFilterFeedsModalProps = {
   panelTopPx?: number | null;
   /** Mobile: Y position (viewport px) where map becomes visible — bottom sheet top aligns here. */
   mobileSheetTopPx?: number | null;
-  restaurants: Restaurant[];
+  searchCenter: LatLng;
   searchQuery: string;
   searchLocation: SearchLocationHit | null;
   activePriceFilter: PriceFilterId;
@@ -181,7 +181,7 @@ export function MapFilterFeedsModal({
   onClose,
   panelTopPx = null,
   mobileSheetTopPx = null,
-  restaurants,
+  searchCenter,
   searchQuery,
   searchLocation,
   activePriceFilter,
@@ -212,11 +212,15 @@ export function MapFilterFeedsModal({
     setDraftShow(showOnlyFeeds);
   }, [open, activePriceFilter, activeCuisine, showOnlyFeeds]);
 
-  const count = useMemo(
-    () =>
-      filterRestaurants(restaurants, draftPrice, searchQuery, searchLocation, draftCuisine, draftShow).length,
-    [restaurants, draftPrice, searchQuery, searchLocation, draftCuisine, draftShow],
-  );
+  const { count, isLoading: countLoading } = useFilterFeedsPreview({
+    open,
+    searchCenter,
+    draftPrice,
+    draftCuisine,
+    draftShow,
+    searchQuery,
+    searchLocation,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -365,7 +369,9 @@ export function MapFilterFeedsModal({
             )}
             style={{ backgroundColor: ACCENT }}
           >
-            {`Show ${count} ${count === 1 ? "Feed" : "Feeds"}`}
+            {countLoading
+              ? "Loading…"
+              : `Show ${count} ${count === 1 ? "Feed" : "Feeds"}`}
           </button>
         </footer>
       </div>

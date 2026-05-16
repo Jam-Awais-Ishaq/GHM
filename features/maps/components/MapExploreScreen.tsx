@@ -12,16 +12,22 @@ import {
   MapRestaurantSidePanel,
   type SidePanelAnchor,
 } from "@/features/maps/components/MapRestaurantSidePanel";
+import { useNearbyRestaurants } from "@/features/maps/hooks/useNearbyRestaurants";
 import { useSearchLocationGeocode } from "@/features/maps/hooks/useSearchLocationGeocode";
 import { useUserLocation } from "@/features/maps/hooks/useUserLocation";
-import { MOCK_RESTAURANTS } from "@/features/restaurants/data/mock-restaurants";
+import { LOCATION_PROMPT_AUTO_DISMISS_MS } from "@/constants/limits";
 import { RestaurantPreviewCard } from "@/features/restaurants/components/RestaurantPreviewCard";
+import {
+  listingsHubLabel,
+  nearbySearchConfig,
+  resolveNearbySearchCenter,
+} from "@/config/nearbySearch";
 import {
   filterRestaurants,
   useMapExploreStore,
   withDistances,
 } from "@/features/restaurants/store/mapExplore.store";
-import { isNearBrisbane, mapCameraCenter } from "@/features/maps/utils/nearBrisbane";
+import { isNearBrisbane } from "@/features/maps/utils/nearBrisbane";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
@@ -31,9 +37,30 @@ const MAP_HEADER_CONTROL_ROUNDED = "rounded-2xl";
 
 export function MapExploreScreen() {
   const { coords, state, refresh } = useUserLocation();
+  const locationReady = state.status === "ready";
+  const nearbySearchCenter = useMemo(
+    () => resolveNearbySearchCenter(coords, locationReady),
+    [coords, locationReady],
+  );
+  const usingBrisbaneHub =
+    !locationReady || !coords || !isNearBrisbane(coords);
   const activePriceFilter = useMapExploreStore((s) => s.activePriceFilter);
   const activeCuisine = useMapExploreStore((s) => s.activeCuisine);
   const showOnlyFeeds = useMapExploreStore((s) => s.showOnlyFeeds);
+  const {
+    restaurants: nearbyRestaurants,
+    isLoading: nearbyLoading,
+    isError: nearbyError,
+    refetch: refetchNearby,
+  } = useNearbyRestaurants(nearbySearchCenter, {
+    priceFilterId: activePriceFilter,
+    cuisineId: activeCuisine,
+  });
+
+  useEffect(() => {
+    if (!locationReady) return;
+    void refetchNearby();
+  }, [locationReady, refetchNearby]);
   const searchQuery = useMapExploreStore((s) => s.searchQuery);
   const selectedRestaurantId = useMapExploreStore((s) => s.selectedRestaurantId);
   const searchLocation = useMapExploreStore((s) => s.searchLocation);
@@ -51,8 +78,22 @@ export function MapExploreScreen() {
   const [filterPanelTopPx, setFilterPanelTopPx] = useState<number | null>(null);
   const [filterMobileSheetTopPx, setFilterMobileSheetTopPx] = useState<number | null>(null);
   const [sidePanelAnchor, setSidePanelAnchor] = useState<SidePanelAnchor | null>(null);
+  const [locationPromptVisible, setLocationPromptVisible] = useState(true);
 
   useSearchLocationGeocode(searchQuery, setSearchLocation);
+
+  useEffect(() => {
+    if (locationReady) {
+      setLocationPromptVisible(true);
+      return;
+    }
+    setLocationPromptVisible(true);
+    const timer = window.setTimeout(
+      () => setLocationPromptVisible(false),
+      LOCATION_PROMPT_AUTO_DISMISS_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [locationReady, state.status]);
 
   useEffect(() => {
     setSelectedRestaurantId(null);
@@ -140,14 +181,21 @@ export function MapExploreScreen() {
   const filtered = useMemo(
     () =>
       filterRestaurants(
-        MOCK_RESTAURANTS,
+        nearbyRestaurants,
         activePriceFilter,
         searchQuery,
         searchLocation,
         activeCuisine,
         showOnlyFeeds,
       ),
-    [activePriceFilter, activeCuisine, showOnlyFeeds, searchQuery, searchLocation],
+    [
+      nearbyRestaurants,
+      activePriceFilter,
+      activeCuisine,
+      showOnlyFeeds,
+      searchQuery,
+      searchLocation,
+    ],
   );
 
   const flyTo = useMemo(
@@ -161,7 +209,9 @@ export function MapExploreScreen() {
       const pin = { lat: searchLocation.lat, lng: searchLocation.lng };
       if (isNearBrisbane(pin)) return pin;
     }
-    return mapCameraCenter(coords);
+    // Distance label = straight line from live GPS (e.g. Pakistan → Brisbane).
+    if (coords) return coords;
+    return null;
   }, [coords, searchLocation]);
 
   const withDist = useMemo(() => withDistances(filtered, distanceOrigin), [filtered, distanceOrigin]);
@@ -254,7 +304,7 @@ export function MapExploreScreen() {
         onClose={() => setFilterModalOpen(false)}
         panelTopPx={filterPanelTopPx}
         mobileSheetTopPx={filterMobileSheetTopPx}
-        restaurants={MOCK_RESTAURANTS}
+        searchCenter={nearbySearchCenter}
         searchQuery={searchQuery}
         searchLocation={searchLocation}
         activePriceFilter={activePriceFilter}
@@ -278,14 +328,73 @@ export function MapExploreScreen() {
           />
         </div>
 
-        {withDist.length === 0 && (
+        {!locationReady && locationPromptVisible && (
+          <div className="pointer-events-auto absolute inset-0 z-[1000] flex items-center justify-center bg-white/80 p-6 backdrop-blur-[2px]">
+            <div className="max-w-sm text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FF5722]/10">
+                <MapPin className="h-7 w-7 text-[#FF5722]" />
+              </div>
+              <p className="text-lg font-semibold text-neutral-900">Turn on your location</p>
+              <p className="mt-2 text-sm leading-snug text-neutral-600">
+                {state.status === "loading" || state.status === "idle"
+                  ? `Deals are around ${listingsHubLabel()}. Allow location to centre the map on you, or browse Brisbane listings (${nearbySearchConfig.radiusKm} km radius).`
+                  : state.status === "denied" || state.status === "unavailable"
+                    ? state.message
+                    : ""}
+              </p>
+              {(state.status === "denied" ||
+                state.status === "unavailable" ||
+                state.status === "idle") && (
+                <button
+                  type="button"
+                  onClick={refresh}
+                  className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:brightness-105"
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  <Navigation className="h-4 w-4" />
+                  Enable location
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {nearbySearchCenter && nearbyLoading && (
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-[1000] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/95 px-4 py-2 text-sm font-medium text-neutral-700 shadow-md">
+            Loading nearby deals…
+          </div>
+        )}
+
+        {nearbySearchCenter && nearbyError && !nearbyLoading && (
+          <div className="pointer-events-auto absolute left-2 right-2 top-2 z-20 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900 shadow-md sm:left-3 sm:right-auto sm:max-w-sm">
+            <p className="font-semibold">Could not load nearby restaurants</p>
+            <p className="mt-1 text-red-800/90">Check that the backend is running, then try again.</p>
+            <button
+              type="button"
+              onClick={() => void refetchNearby()}
+              className="mt-2 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-950"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {nearbySearchCenter && !nearbyLoading && withDist.length === 0 && (
           <div className="pointer-events-auto absolute inset-0 z-[1000] flex items-center justify-center bg-white/75 p-6 backdrop-blur-[2px]">
             <div className="max-w-xs text-center">
-              <p className="text-base font-semibold text-neutral-900">No matches</p>
+              <p className="text-base font-semibold text-neutral-900">
+                {nearbyRestaurants.length === 0 && !searchQuery.trim()
+                  ? `No restaurants within ${nearbySearchConfig.radiusKm} km`
+                  : "No matches"}
+              </p>
               <p className="mt-2 text-sm leading-snug text-neutral-600">
-                {searchQuery.trim()
-                  ? `Nothing matches “${searchQuery.trim()}” for this price filter. Try a dish, suburb, or place (e.g. West End).`
-                  : "Nothing matches the current price filter."}
+                {nearbyRestaurants.length === 0 && !searchQuery.trim()
+                  ? usingBrisbaneHub
+                    ? `No approved meals within ${nearbySearchConfig.radiusKm} km of ${listingsHubLabel()}. Ensure meals are APPROVED in the database.`
+                    : "No approved meals near your location. Meals must be status APPROVED in the database."
+                  : searchQuery.trim()
+                    ? `Nothing matches “${searchQuery.trim()}” for this price filter. Try a dish, suburb, or place (e.g. West End).`
+                    : "Nothing matches the current price filter."}
               </p>
               {searchQuery.trim() ? (
                 <button
@@ -296,24 +405,6 @@ export function MapExploreScreen() {
                   Clear search
                 </button>
               ) : null}
-            </div>
-          </div>
-        )}
-
-        {(state.status === "denied" || state.status === "unavailable") && (
-          <div className="pointer-events-auto absolute left-2 right-2 top-2 z-20 flex items-start gap-2 rounded-xl border border-amber-200/80 bg-amber-50/98 p-2.5 text-xs text-amber-950 shadow-md backdrop-blur-sm sm:left-3 sm:right-3 sm:p-3">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-            <div className="min-w-0">
-              <p className="font-semibold text-amber-950">Location optional</p>
-              <p className="text-amber-900/85">{state.message}</p>
-              <button
-                type="button"
-                onClick={refresh}
-                className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-950 shadow-sm"
-              >
-                <Navigation className="h-3 w-3" />
-                Try again
-              </button>
             </div>
           </div>
         )}
