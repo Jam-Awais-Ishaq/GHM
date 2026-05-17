@@ -201,5 +201,6 @@ export function withDistances(
   return list.map((r) => ({
     ...r,
     distanceKm: user ? haversineKm(user, r.position) : null,
+    distanceIsDriving: false,
   }));
 }

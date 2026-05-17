@@ -41,4 +41,6 @@ export type Restaurant = {
 
 export type RestaurantWithDistance = Restaurant & {
   distanceKm: number | null;
+  /** Road distance from routing API; otherwise straight-line fallback. */
+  distanceIsDriving?: boolean;
 };

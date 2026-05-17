@@ -3,6 +3,7 @@ import type { Restaurant } from "@/features/restaurants/types/restaurant";
 
 export function mapFilterListingToRestaurants(
   rows: FilterListingRestaurant[],
+  maxPrice?: number,
 ): Restaurant[] {
   const out: Restaurant[] = [];
 
@@ -11,6 +12,7 @@ export function mapFilterListingToRestaurants(
 
     for (const meal of r.meals) {
       if (meal.status !== "APPROVED") continue;
+      if (maxPrice != null && meal.price > maxPrice) continue;
 
       out.push({
         id: String(meal.id),

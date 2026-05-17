@@ -1,26 +1,23 @@
 import { NEARBY_LISTINGS_RADIUS_KM } from "@/constants/limits";
 import type { LatLng } from "@/features/restaurants/types/restaurant";
 import { isNearBrisbane } from "@/features/maps/utils/nearBrisbane";
+import { DEFAULT_MAP_CENTER } from "@/lib/maps/googleMaps";
 
-/**
- * DB restaurant example: 27°24'34.4"S 153°03'50.1"E
- * → West End / South Brisbane, Queensland, Australia (not Pakistan).
- */
+/** Fallback centre for nearby/filter queries when GPS is off or outside the service area. */
 export const BRISBANE_LISTINGS_HUB: LatLng = {
-  lat: -27.4095556,
-  lng: 153.0639167,
+  lat: DEFAULT_MAP_CENTER.lat,
+  lng: DEFAULT_MAP_CENTER.lng,
 };
 
 export const nearbySearchConfig = {
-  /** Search radius around the listings hub (greater Brisbane metro). */
   radiusKm: NEARBY_LISTINGS_RADIUS_KM,
   listingsHub: BRISBANE_LISTINGS_HUB,
 } as const;
 
 /**
- * Where to query /api/listingNearby/nearby.
- * - In Brisbane: use live GPS (true “near me”).
- * - Overseas (e.g. Pakistan): use Brisbane hub so DB pins still load.
+ * Where to query nearby/filter APIs.
+ * - Inside service area: live GPS.
+ * - Otherwise: Bahawalpur hub.
  */
 export function resolveNearbySearchCenter(
   coords: LatLng | null,
@@ -33,5 +30,5 @@ export function resolveNearbySearchCenter(
 }
 
 export function listingsHubLabel(): string {
-  return "West End, Brisbane QLD";
+  return "Bahawalpur, Punjab";
 }

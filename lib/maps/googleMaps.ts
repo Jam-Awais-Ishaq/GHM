@@ -25,17 +25,15 @@ export const SILVER_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
 ];
 
+/** Greater Brisbane — map centre, geocode box, and “near service area” checks. */
 export const DEFAULT_MAP_CENTER: google.maps.LatLngLiteral = {
-  lat: -27.4698,
-  lng: 153.0251,
+  lat: -27.470027,
+  lng: 153.022977,
 };
 
 export const DEFAULT_MAP_ZOOM = 14;
 
-/**
- * Greater Brisbane / SEQ core — panning is restricted to this box (AU only context).
- * Covers CBD → Ipswich fringe → Gold Coast north → Sunshine Coast south / Bay islands east.
- */
+/** Greater Brisbane / SEQ — panning restricted to this box. */
 export const BRISBANE_BOUNDS: google.maps.LatLngBoundsLiteral = {
   south: -27.95,
   west: 152.48,
