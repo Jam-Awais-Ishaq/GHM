@@ -7,9 +7,9 @@ import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import type { LatLng } from "@/features/restaurants/types/restaurant";
 
 import type { DealMapProps } from "@/features/maps/map-types";
-import { isNearBrisbane } from "@/features/maps/utils/nearBrisbane";
+import { isNearBrisbane, mapCameraCenter } from "@/features/maps/utils/nearBrisbane";
 import { CARTO_LIGHT_TILES } from "@/lib/maps/leafletTiles";
-import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, BRISBANE_MAX_BOUNDS } from "@/lib/maps/googleMaps";
+import { DEFAULT_MAP_ZOOM, BRISBANE_MAX_BOUNDS } from "@/lib/maps/googleMaps";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
 
 import "leaflet/dist/leaflet.css";
@@ -98,7 +98,8 @@ export function DealMapLeaflet({
   onSelect,
   flyTo,
 }: DealMapProps) {
-  const center: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng];
+  const mapCenter = mapCameraCenter(userCoords);
+  const center: [number, number] = [mapCenter.lat, mapCenter.lng];
   const showUserHere = isNearBrisbane(userCoords);
 
   const icons = useMemo(() => {

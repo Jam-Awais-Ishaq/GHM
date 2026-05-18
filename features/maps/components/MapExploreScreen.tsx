@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { MapPin, Navigation, Plus, Search, SlidersHorizontal, User } from "lucide-react";
 import { useMemo, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -12,6 +12,7 @@ import {
   MapRestaurantSidePanel,
   type SidePanelAnchor,
 } from "@/features/maps/components/MapRestaurantSidePanel";
+import { useDrivingDistances } from "@/features/maps/hooks/useDrivingDistances";
 import { useNearbyRestaurants } from "@/features/maps/hooks/useNearbyRestaurants";
 import { useSearchLocationGeocode } from "@/features/maps/hooks/useSearchLocationGeocode";
 import { useUserLocation } from "@/features/maps/hooks/useUserLocation";
@@ -42,8 +43,6 @@ export function MapExploreScreen() {
     () => resolveNearbySearchCenter(coords, locationReady),
     [coords, locationReady],
   );
-  const usingBrisbaneHub =
-    !locationReady || !coords || !isNearBrisbane(coords);
   const activePriceFilter = useMapExploreStore((s) => s.activePriceFilter);
   const activeCuisine = useMapExploreStore((s) => s.activeCuisine);
   const showOnlyFeeds = useMapExploreStore((s) => s.showOnlyFeeds);
@@ -198,23 +197,40 @@ export function MapExploreScreen() {
     ],
   );
 
-  const flyTo = useMemo(
-    () =>
-      searchLocation ? { lat: searchLocation.lat, lng: searchLocation.lng } : null,
-    [searchLocation],
-  );
+  const flyTo = useMemo(() => {
+    if (searchLocation) {
+      return { lat: searchLocation.lat, lng: searchLocation.lng };
+    }
+    return nearbySearchCenter;
+  }, [searchLocation, nearbySearchCenter]);
 
   const distanceOrigin = useMemo(() => {
     if (searchLocation) {
       const pin = { lat: searchLocation.lat, lng: searchLocation.lng };
       if (isNearBrisbane(pin)) return pin;
     }
-    // Distance label = straight line from live GPS (e.g. Pakistan → Brisbane).
     if (coords) return coords;
     return null;
   }, [coords, searchLocation]);
 
-  const withDist = useMemo(() => withDistances(filtered, distanceOrigin), [filtered, distanceOrigin]);
+  const withStraightLine = useMemo(
+    () => withDistances(filtered, distanceOrigin),
+    [filtered, distanceOrigin],
+  );
+
+  const { drivingKmById } = useDrivingDistances(distanceOrigin, filtered);
+
+  const withDist = useMemo(
+    () =>
+      withStraightLine.map((r) => {
+        const driveKm = drivingKmById[r.id];
+        if (driveKm != null && Number.isFinite(driveKm)) {
+          return { ...r, distanceKm: driveKm, distanceIsDriving: true };
+        }
+        return { ...r, distanceIsDriving: false };
+      }),
+    [withStraightLine, drivingKmById],
+  );
 
   const selected = useMemo(
     () => withDist.find((r) => r.id === selectedRestaurantId) ?? null,
@@ -337,7 +353,7 @@ export function MapExploreScreen() {
               <p className="text-lg font-semibold text-neutral-900">Turn on your location</p>
               <p className="mt-2 text-sm leading-snug text-neutral-600">
                 {state.status === "loading" || state.status === "idle"
-                  ? `Deals are around ${listingsHubLabel()}. Allow location to centre the map on you, or browse Brisbane listings (${nearbySearchConfig.radiusKm} km radius).`
+                  ? `Deals are around ${listingsHubLabel()}. Allow location to centre the map on you, or browse listings (${nearbySearchConfig.radiusKm} km radius).`
                   : state.status === "denied" || state.status === "unavailable"
                     ? state.message
                     : ""}
@@ -361,7 +377,7 @@ export function MapExploreScreen() {
 
         {nearbySearchCenter && nearbyLoading && (
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-[1000] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/95 px-4 py-2 text-sm font-medium text-neutral-700 shadow-md">
-            Loading nearby deals…
+            Loading nearby dealsâ€¦
           </div>
         )}
 
@@ -379,35 +395,6 @@ export function MapExploreScreen() {
           </div>
         )}
 
-        {nearbySearchCenter && !nearbyLoading && withDist.length === 0 && (
-          <div className="pointer-events-auto absolute inset-0 z-[1000] flex items-center justify-center bg-white/75 p-6 backdrop-blur-[2px]">
-            <div className="max-w-xs text-center">
-              <p className="text-base font-semibold text-neutral-900">
-                {nearbyRestaurants.length === 0 && !searchQuery.trim()
-                  ? `No restaurants within ${nearbySearchConfig.radiusKm} km`
-                  : "No matches"}
-              </p>
-              <p className="mt-2 text-sm leading-snug text-neutral-600">
-                {nearbyRestaurants.length === 0 && !searchQuery.trim()
-                  ? usingBrisbaneHub
-                    ? `No approved meals within ${nearbySearchConfig.radiusKm} km of ${listingsHubLabel()}. Ensure meals are APPROVED in the database.`
-                    : "No approved meals near your location. Meals must be status APPROVED in the database."
-                  : searchQuery.trim()
-                    ? `Nothing matches “${searchQuery.trim()}” for this price filter. Try a dish, suburb, or place (e.g. West End).`
-                    : "Nothing matches the current price filter."}
-              </p>
-              {searchQuery.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="mt-4 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 shadow-sm transition hover:bg-neutral-50"
-                >
-                  Clear search
-                </button>
-              ) : null}
-            </div>
-          </div>
-        )}
 
         {selected && !sidePanelOpen && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[calc(4.85rem+env(safe-area-inset-bottom))] z-40 flex justify-center pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1rem,env(safe-area-inset-right))]">

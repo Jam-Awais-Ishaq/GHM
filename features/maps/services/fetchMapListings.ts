@@ -45,7 +45,7 @@ export async function fetchMapListings(
     });
     if (!filterRes.success) return [];
     return withinRadiusKm(
-      mapFilterListingToRestaurants(filterRes.data),
+      mapFilterListingToRestaurants(filterRes.data, maxPrice),
       searchCenter,
       radiusKm,
     );

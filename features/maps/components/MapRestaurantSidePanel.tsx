@@ -51,7 +51,7 @@ export function MapRestaurantSidePanel({
     Number.isFinite(distRaw) &&
     distRaw >= 0 &&
     distRaw <= MAX_DISPLAY_DISTANCE_KM
-      ? formatDistanceKm(distRaw)
+      ? formatDistanceKm(distRaw, r.distanceIsDriving ? "drive" : "straight")
       : null;
   const verified = r.priceVerifiedAt
     ? `Price verified ${formatRelativeDay(new Date(r.priceVerifiedAt))}`

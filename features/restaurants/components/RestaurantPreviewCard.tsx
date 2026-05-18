@@ -52,7 +52,7 @@ export function RestaurantPreviewCard({
     Number.isFinite(distRaw) &&
     distRaw >= 0 &&
     distRaw <= MAX_DISPLAY_DISTANCE_KM
-      ? formatDistanceKm(distRaw)
+      ? formatDistanceKm(distRaw, restaurant.distanceIsDriving ? "drive" : "straight")
       : null;
 
   const shell = compact ? cardShellCompactClass : cardShellClass;

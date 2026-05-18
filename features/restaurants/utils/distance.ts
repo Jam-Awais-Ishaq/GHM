@@ -18,8 +18,12 @@ export function haversineKm(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-export function formatDistanceKm(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)}m`;
-  if (km >= 1000) return `${Math.round(km).toLocaleString()}km`;
-  return `${km.toFixed(1)}km`;
+export function formatDistanceKm(
+  km: number,
+  mode: "drive" | "straight" = "drive",
+): string {
+  const suffix = mode === "drive" ? " drive" : "";
+  if (km < 1) return `${Math.round(km * 1000)}m${suffix}`;
+  if (km >= 1000) return `${Math.round(km).toLocaleString()}km${suffix}`;
+  return `${km.toFixed(1)}km${suffix}`;
 }
