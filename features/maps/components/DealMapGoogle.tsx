@@ -13,11 +13,19 @@ import { env } from "@/config/env";
 import { MapCoordinateMenu } from "@/features/maps/components/MapCoordinateMenu";
 import { MapDrivingRouteGoogle } from "@/features/maps/components/MapDrivingRouteGoogle";
 import { MapRoutePicker } from "@/features/maps/components/MapRoutePicker";
+import { RestaurantRoutePinGoogle } from "@/features/maps/components/RestaurantRoutePin";
+import { MapFitRouteBoundsGoogle } from "@/features/maps/components/MapFitRouteBounds";
+import { RouteYouMarkerGoogle } from "@/features/maps/components/RouteYouMarker";
 import { UserLocationMarkerGoogle } from "@/features/maps/components/UserLocationMarker";
 import type { DealMapProps } from "@/features/maps/map-types";
 import { useMapCoordinateMenu } from "@/features/maps/hooks/useMapCoordinateMenu";
 import { useRouteSelection } from "@/features/maps/hooks/useRouteSelection";
-import { isNearBrisbane, mapCameraCenter } from "@/features/maps/utils/nearBrisbane";
+import {
+  coordsNear,
+  isInBrisbaneBounds,
+  isNearBrisbane,
+  mapCameraCenter,
+} from "@/features/maps/utils/nearBrisbane";
 import {
   BRISBANE_BOUNDS,
   DEFAULT_MAP_ZOOM,
@@ -81,10 +89,12 @@ function MapFlyToSearch({ target }: { target: google.maps.LatLngLiteral | null |
 function PriceMarker({
   restaurant,
   selected,
+  showRouteLabels,
   onSelect,
 }: {
   restaurant: DealMapProps["restaurants"][number];
   selected: boolean;
+  showRouteLabels: boolean;
   onSelect: DealMapProps["onSelect"];
 }) {
   const { price, isHotDeal, isTopRated, id } = restaurant;
@@ -116,6 +126,11 @@ function PriceMarker({
             strokeWidth={2.2}
             aria-hidden
           />
+        )}
+        {selected && showRouteLabels && (
+          <span className="absolute -top-7 z-[2] whitespace-nowrap rounded-md bg-neutral-900 px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
+            Restaurant
+          </span>
         )}
         <div
           className={cn(
@@ -149,7 +164,6 @@ export function DealMapGoogle({
 }: DealMapProps) {
   const center = mapCameraCenter(userCoords);
   const mapId = env.googleMapId.trim() || undefined;
-  const showUserHere = isNearBrisbane(userCoords);
   const { menu: coordMenu, openAt, openFromEvent, close: closeCoordMenu } = useMapCoordinateMenu();
 
   const routeTo = useMemo(() => {
@@ -161,6 +175,15 @@ export function DealMapGoogle({
     routeFrom,
     routeTo,
   );
+
+  const routeActive = routeFrom != null && routeTo != null && routeOptions.length > 0;
+
+  const showGpsPin =
+    userCoords != null &&
+    isInBrisbaneBounds(userCoords) &&
+    (!routeFrom || !coordsNear(userCoords, routeFrom));
+
+  const showRouteYou = routeActive && routeFrom != null;
 
   return (
     <div className="relative h-full w-full min-h-0">
@@ -181,24 +204,56 @@ export function DealMapGoogle({
         mapId={mapId}
         colorScheme="LIGHT"
       >
-        <MapFlyToSearch target={flyTo ?? null} />
+        {!routeActive && <MapFlyToSearch target={flyTo ?? null} />}
         <RecenterOnUser coords={userCoords} flyTo={flyTo} />
         <MapCoordinateLayer onOpen={openAt} />
-        <MapDrivingRouteGoogle options={routeOptions} selectedIndex={selectedIndex} />
-        {showUserHere && userCoords && (
+        <MapDrivingRouteGoogle
+          options={routeOptions}
+          selectedIndex={selectedIndex}
+          origin={routeFrom}
+          destination={routeTo}
+        />
+        {routeActive && (
+          <MapFitRouteBoundsGoogle
+            origin={routeFrom}
+            destination={routeTo}
+            options={routeOptions}
+            selectedIndex={selectedIndex}
+          />
+        )}
+        {showRouteYou && routeFrom && (
+          <RouteYouMarkerGoogle
+            coords={routeFrom}
+            onContextMenu={(e) => openFromEvent(e, routeFrom.lat, routeFrom.lng)}
+          />
+        )}
+        {showGpsPin && userCoords && (
           <UserLocationMarkerGoogle
             coords={userCoords}
             onContextMenu={(e) => openFromEvent(e, userCoords.lat, userCoords.lng)}
           />
         )}
-        {restaurants.map((r) => (
-          <PriceMarker
-            key={r.id}
-            restaurant={r}
-            selected={r.id === selectedId}
-            onSelect={onSelect}
-          />
-        ))}
+        {restaurants.map((r) => {
+          const selected = r.id === selectedId;
+          if (routeActive && selected) {
+            return (
+              <RestaurantRoutePinGoogle
+                key={r.id}
+                position={r.position}
+                onClick={() => onSelect(r.id)}
+              />
+            );
+          }
+          return (
+            <PriceMarker
+              key={r.id}
+              restaurant={r}
+              selected={selected}
+              showRouteLabels={false}
+              onSelect={onSelect}
+            />
+          );
+        })}
       </Map>
       <MapCoordinateMenu menu={coordMenu} onClose={closeCoordMenu} />
     </APIProvider>
