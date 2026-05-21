@@ -9,11 +9,12 @@ export type CuisineFilterId =
   | "bakery"
   | "burgers";
 
-export type ShowOnlyFeedsId = "all" | "hot" | "verified" | "top50";
+export type ShowOnlyFeedsId = "all" | "verified" | "top50";
 
 export type LatLng = { lat: number; lng: number };
 
 export type RestaurantCommunityNoteReply = {
+  id?: number;
   author: string;
   ago: string;
   body: string;
@@ -21,6 +22,7 @@ export type RestaurantCommunityNoteReply = {
 };
 
 export type RestaurantCommunityNote = {
+  id?: number;
   author: string;
   ago: string;
   body: string;
@@ -30,6 +32,8 @@ export type RestaurantCommunityNote = {
 
 export type Restaurant = {
   id: string;
+  /** Set when `id` is a meal id; use for `/restaurant/[id]` links. */
+  restaurantId?: string;
   name: string;
   dish: string;
   price: number;
@@ -42,6 +46,8 @@ export type Restaurant = {
   worthIt: number;
   overrated: number;
   isHotDeal?: boolean;
+  /** Admin-featured — crown + black pin on map. */
+  isFeatured?: boolean;
   isTopRated?: boolean;
   priceVerifiedAt?: string;
   communityNotes?: RestaurantCommunityNote[];

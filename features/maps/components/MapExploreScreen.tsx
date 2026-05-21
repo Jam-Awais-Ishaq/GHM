@@ -345,14 +345,48 @@ export function MapExploreScreen() {
     return [...withDist].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
   }, [withDist, searchQuery]);
 
-  const mapRestaurants = useMemo(() => {
-    if (!selectedRestaurantId) return withDist;
-    if (withDist.some((r) => r.id === selectedRestaurantId)) return withDist;
-    const extra = nearbyRestaurants.find((r) => r.id === selectedRestaurantId);
-    if (!extra) return withDist;
-    const withExtra = [...withDist, ...withDistances([extra], distanceOrigin)];
-    return withExtra;
-  }, [withDist, selectedRestaurantId, nearbyRestaurants, distanceOrigin]);
+  const mapRestaurants = withDist;
+
+  const lastVenueIdRef = useRef<string | null>(null);
+
+  /** When the selected meal is hidden/deleted, select another pin at the same restaurant. */
+  useEffect(() => {
+    if (!selectedRestaurantId) {
+      lastVenueIdRef.current = null;
+      return;
+    }
+
+    const current = withDist.find((r) => r.id === selectedRestaurantId);
+    if (current) {
+      lastVenueIdRef.current = current.restaurantId ?? null;
+      return;
+    }
+
+    const venueId =
+      lastVenueIdRef.current ??
+      nearbyRestaurants.find((r) => r.id === selectedRestaurantId)?.restaurantId ??
+      null;
+
+    if (!venueId) {
+      setSelectedRestaurantId(null);
+      lastVenueIdRef.current = null;
+      return;
+    }
+
+    const replacement = withDist.find((r) => r.restaurantId === venueId);
+    if (replacement && replacement.id !== selectedRestaurantId) {
+      setSelectedRestaurantId(replacement.id);
+      lastVenueIdRef.current = venueId;
+    } else if (!replacement) {
+      setSelectedRestaurantId(null);
+      lastVenueIdRef.current = null;
+    }
+  }, [
+    selectedRestaurantId,
+    withDist,
+    nearbyRestaurants,
+    setSelectedRestaurantId,
+  ]);
 
   const showSearchResults = searchFocused && searchQuery.trim().length > 0;
 
@@ -589,7 +623,7 @@ export function MapExploreScreen() {
             >
               <RestaurantPreviewCard
                 restaurant={selected}
-                href={routes.restaurant(selected.id)}
+                href={routes.restaurant(selected.restaurantId ?? selected.id)}
                 onOpen={() => setSidePanelOpen(true)}
                 compact
               />

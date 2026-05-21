@@ -1,0 +1,74 @@
+import { ApiError, apiRequest } from "@/api/inspector";
+import { env } from "@/config/env";
+import type {
+  ImportCsvResponse,
+  ModerationActionResponse,
+  PendingMealsResponse,
+  ReportedMealsResponse,
+} from "@/api/types/admin";
+
+export function getPendingSubmissions() {
+  return apiRequest<PendingMealsResponse>("/api/admin/pending", {
+    credentials: "include",
+  });
+}
+
+export function approveSubmission(mealId: string | number) {
+  return apiRequest<ModerationActionResponse>(`/api/admin/approve/${mealId}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+}
+
+export function rejectSubmission(mealId: string | number) {
+  return apiRequest<ModerationActionResponse>(`/api/admin/reject/${mealId}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+}
+
+/** Meals with user reports and/or auto-hidden (3+ reports). */
+export function getReportedListings() {
+  return apiRequest<ReportedMealsResponse>("/api/admin/reported-listings", {
+    credentials: "include",
+  });
+}
+
+/** Clear hide flags — listing shows on map again. */
+export function restoreReportedListing(mealId: string | number) {
+  return apiRequest<ModerationActionResponse>(`/api/admin/restore-listing/${mealId}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+}
+
+/** Permanently remove meal (and restaurant if empty). */
+export function deleteReportedListing(mealId: string | number) {
+  return rejectSubmission(mealId);
+}
+
+export async function importAdminCsv(file: File): Promise<ImportCsvResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${env.apiBaseUrl}/api/admin/import-csv`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  const data: unknown = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    const message =
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof (data as { message: unknown }).message === "string"
+        ? (data as { message: string }).message
+        : `Request failed (${res.status})`;
+    throw new ApiError(message, res.status, data);
+  }
+
+  return data as ImportCsvResponse;
+}

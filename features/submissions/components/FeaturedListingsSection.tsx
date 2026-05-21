@@ -1,13 +1,20 @@
 "use client";
 
-import { MoreHorizontal, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontal, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
+import { ApiError } from "@/api/inspector";
 import {
-  FEATURED_LISTINGS,
-  type FeaturedListing,
-  type FeaturedListingStatus,
-} from "@/features/submissions/data/mock-featured-listings";
+  listMealsForFeaturedAdmin,
+  toggleFeaturedListing,
+} from "@/api/routes/featured.api";
+import type { FeaturedListingStatus } from "@/features/submissions/data/mock-featured-listings";
+import {
+  defaultFeaturedUntilIso,
+  mapFeaturedMealToListing,
+  type FeaturedListingView,
+} from "@/features/submissions/utils/mapFeaturedMeal";
 import { cn } from "@/lib/utils/cn";
 
 const SECTION_TITLE_CLASS =
@@ -37,10 +44,12 @@ function FeaturedToggle({
   enabled,
   onChange,
   label,
+  disabled,
 }: {
   enabled: boolean;
   onChange: (next: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -48,9 +57,10 @@ function FeaturedToggle({
       role="switch"
       aria-checked={enabled}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!enabled)}
       className={cn(
-        "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+        "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50",
         enabled ? "bg-[#FF5722]" : "bg-neutral-300",
       )}
     >
@@ -67,9 +77,11 @@ function FeaturedToggle({
 function FeaturedCard({
   item,
   onToggle,
+  busy,
 }: {
-  item: FeaturedListing;
-  onToggle: (id: string, enabled: boolean) => void;
+  item: FeaturedListingView;
+  onToggle: (mealId: number, enabled: boolean) => void;
+  busy?: boolean;
 }) {
   return (
     <article className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-sm">
@@ -81,7 +93,9 @@ function FeaturedCard({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold text-neutral-900">{item.name}</p>
         <p className="mt-0.5 text-xs text-neutral-600">{item.dish}</p>
-        <p className="mt-1 text-xs font-bold text-neutral-900">{item.location}</p>
+        <p className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-neutral-900">
+          {item.location}
+        </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <p className="text-xs text-neutral-500">
             Featured until {item.featuredUntil ?? "—"}
@@ -92,7 +106,8 @@ function FeaturedCard({
       <div className="flex shrink-0 flex-col items-end gap-2">
         <FeaturedToggle
           enabled={item.enabled}
-          onChange={(next) => onToggle(item.id, next)}
+          disabled={busy}
+          onChange={(next) => onToggle(item.mealId, next)}
           label={`${item.enabled ? "Remove" : "Add"} ${item.name} from featured`}
         />
         <button
@@ -107,43 +122,55 @@ function FeaturedCard({
   );
 }
 
-function matchesFeaturedSearch(item: FeaturedListing, query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return [item.name, item.dish, item.location, item.status, item.featuredUntil ?? ""]
-    .join(" ")
-    .toLowerCase()
-    .includes(q);
-}
-
 export function FeaturedListingsSection() {
-  const [listings, setListings] = useState(FEATURED_LISTINGS);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [toggleBusyId, setToggleBusyId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredListings = useMemo(
-    () => listings.filter((item) => matchesFeaturedSearch(item, searchQuery)),
-    [listings, searchQuery],
-  );
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(searchQuery.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
 
-  const handleToggle = (id: string, enabled: boolean) => {
-    setListings((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-        const status: FeaturedListingStatus = !enabled
-          ? "inactive"
-          : item.featuredUntil === "1 Jun 2025"
-            ? "scheduled"
-            : "active";
-        return { ...item, enabled, status };
-      }),
-    );
+  const mealsQuery = useQuery({
+    queryKey: ["admin-meals-feature", debouncedQ],
+    queryFn: async () => {
+      const res = await listMealsForFeaturedAdmin(debouncedQ, debouncedQ.length >= 2 ? 50 : 100);
+      return res.data.map(mapFeaturedMealToListing);
+    },
+    staleTime: 30_000,
+  });
+
+  const listings = mealsQuery.data ?? [];
+  const isLoading = mealsQuery.isLoading;
+  const isError = mealsQuery.isError;
+
+  const handleToggle = async (mealId: number, enabled: boolean) => {
+    setToggleBusyId(mealId);
+    setError(null);
+    try {
+      await toggleFeaturedListing(mealId, {
+        isFeatured: enabled,
+        featuredUntil: enabled ? defaultFeaturedUntilIso() : null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["admin-meals-feature"] });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update featured listing.");
+    } finally {
+      setToggleBusyId(null);
+    }
   };
 
   return (
     <section>
       <h2 className={SECTION_TITLE_CLASS}>Featured listings</h2>
+      <p className="mt-1 text-xs text-neutral-500">
+        All approved restaurants — toggle on to feature on the map.
+      </p>
       <label htmlFor="featured-listings-search" className="sr-only">
-        Search featured listings
+        Search restaurants
       </label>
       <div className="relative mt-3">
         <Search
@@ -159,16 +186,41 @@ export function FeaturedListingsSection() {
           className="h-11 w-full rounded-2xl border border-neutral-200/90 bg-white py-2.5 pr-3.5 pl-10 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-neutral-300 focus:ring-0"
         />
       </div>
+
+      {error ? (
+        <p className="mt-2 text-center text-xs font-medium text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <div className="mt-3 space-y-3">
-        {filteredListings.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-4 py-8 text-center text-sm text-neutral-600">
-            No featured listings match your search.
+        {isLoading ? (
+          <p className="rounded-2xl border border-neutral-200/90 bg-white px-4 py-8 text-center text-sm text-neutral-500">
+            Loading restaurants…
           </p>
-        ) : (
-          filteredListings.map((item) => (
-            <FeaturedCard key={item.id} item={item} onToggle={handleToggle} />
-          ))
-        )}
+        ) : null}
+        {isError ? (
+          <p className="rounded-2xl border border-neutral-200/90 bg-white px-4 py-8 text-center text-sm text-red-600">
+            Could not load restaurants. Sign in as admin and try again.
+          </p>
+        ) : null}
+        {!isLoading && !isError && listings.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-4 py-8 text-center text-sm text-neutral-600">
+            {debouncedQ.length >= 2
+              ? "No restaurants match your search."
+              : "No approved restaurants yet."}
+          </p>
+        ) : null}
+        {!isLoading && !isError
+          ? listings.map((item) => (
+              <FeaturedCard
+                key={item.id}
+                item={item}
+                busy={toggleBusyId === item.mealId}
+                onToggle={handleToggle}
+              />
+            ))
+          : null}
       </div>
     </section>
   );

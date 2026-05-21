@@ -7,6 +7,7 @@ export type NearbyListingDto = {
   longitude: number;
   price: number;
   image: string | null;
+  isFeatured?: boolean;
 };
 
 export type NearbyListingsResponse = {

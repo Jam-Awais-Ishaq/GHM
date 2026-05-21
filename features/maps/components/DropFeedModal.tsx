@@ -4,7 +4,11 @@ import { Camera, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 
+import { createListing } from "@/api/routes/listings.api";
+import { ApiError } from "@/api/inspector";
 import type { CuisineFilterId } from "@/features/restaurants/types/restaurant";
+import { cuisineFilterToApi } from "@/features/restaurants/utils/listingFilters";
+import { resolveDropFeedLocation } from "@/lib/maps/resolveDropFeedLocation";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
@@ -36,6 +40,15 @@ function toDateTimeMs(date: string, time: string) {
   if (!date) return NaN;
   const t = time || "23:59";
   return new Date(`${date}T${t}`).getTime();
+}
+
+function parsePrice(value: string): number | null {
+  const n = Number(value.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function toIsoDateTime(date: string, time: string) {
+  return new Date(`${date}T${time || "00:00"}`).toISOString();
 }
 
 function formatEndCountdown(msRemaining: number) {
@@ -70,6 +83,8 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
   const [dealDescription, setDealDescription] = useState("");
   const [countdownLabel, setCountdownLabel] = useState("");
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -104,6 +119,8 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
       setDealDescription("");
       setCountdownLabel("");
       setPhotoName(null);
+      setSubmitting(false);
+      setError(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [open]);
@@ -128,27 +145,55 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    // Demo — wire to API / Supabase later
-    console.info("Drop feed:", {
-      restaurantName,
-      suburb,
-      price,
-      dish,
-      cuisine,
-      dealTimerEnabled,
-      ...(dealTimerEnabled
-        ? {
-            startDate,
-            startTime: startTime || "00:00",
-            endDate,
-            endTime: endTime || "23:59",
-            dealDescription: dealDescription.trim(),
-            countdown: countdownLabel,
-          }
-        : {}),
-      photo: photoName,
-    });
-    onClose();
+    setError(null);
+
+    const priceNum = parsePrice(price);
+    if (priceNum == null) {
+      setError("Enter a valid price.");
+      return;
+    }
+
+    const photoFile = fileInputRef.current?.files?.[0];
+    if (!photoFile) {
+      setError("Add a photo to submit.");
+      return;
+    }
+
+    void (async () => {
+      setSubmitting(true);
+      try {
+        const { coords } = await resolveDropFeedLocation(suburb);
+        const formData = new FormData();
+        formData.append("restaurantName", restaurantName.trim());
+        formData.append("suburb", suburb.trim());
+        formData.append("dishName", dish.trim());
+        formData.append("cuisine", cuisineFilterToApi(cuisine) ?? cuisine);
+        formData.append("price", String(priceNum));
+        formData.append("latitude", String(coords.lat));
+        formData.append("longitude", String(coords.lng));
+        formData.append("image", photoFile);
+
+        if (dealTimerEnabled) {
+          formData.append("isHotDeal", "true");
+          formData.append("hotDealStartDateTime", toIsoDateTime(startDate, startTime || "00:00"));
+          formData.append("hotDealEndDateTime", toIsoDateTime(endDate, endTime || "23:59"));
+          formData.append("hotDealDescription", dealDescription.trim());
+        }
+
+        await createListing(formData);
+        onClose();
+      } catch (err) {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Could not submit. Try again.",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const ui = (
@@ -228,15 +273,15 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
             <div className="grid grid-cols-[minmax(0,1fr)_min(7.25rem,30%)] gap-3 max-[380px]:grid-cols-1">
               <div className="min-w-0">
                 <label htmlFor="drop-suburb" className={labelClass}>
-                  Suburb / area
+                  Suburb or address
                   <RequiredMark />
                 </label>
                 <input
                   id="drop-suburb"
                   name="suburb"
                   type="text"
-                  autoComplete="address-level2"
-                  placeholder="West End"
+                  autoComplete="street-address"
+                  placeholder="West End or 8 Bent St, Toowong…"
                   value={suburb}
                   onChange={(e) => setSuburb(e.target.value)}
                   className={fieldClass}
@@ -462,13 +507,20 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
               </button>
             </div>
 
+            {error ? (
+              <p className="text-sm font-medium text-red-600" role="alert">
+                {error}
+              </p>
+            ) : null}
+
             <div className="shrink-0 border-t border-neutral-100 pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:border-neutral-100/90 sm:pt-5 sm:pb-0">
               <button
                 type="submit"
-                className="flex h-12 w-full items-center justify-center rounded-2xl text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(255,87,34,0.35)] transition hover:brightness-105 active:scale-[0.99] sm:h-11 sm:text-sm"
+                disabled={submitting}
+                className="flex h-12 w-full items-center justify-center rounded-2xl text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(255,87,34,0.35)] transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60 sm:h-11 sm:text-sm"
                 style={{ backgroundColor: ACCENT }}
               >
-                Drop the feed
+                {submitting ? "Submitting…" : "Drop the feed"}
               </button>
             </div>
           </div>

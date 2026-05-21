@@ -22,9 +22,13 @@ export async function GET(req: NextRequest) {
 
   const viewbox = `${BRISBANE_BOUNDS.west},${BRISBANE_BOUNDS.south},${BRISBANE_BOUNDS.east},${BRISBANE_BOUNDS.north}`;
 
+  const looksComplete =
+    /,/.test(q) && /\b(australia|qld|queensland)\b/i.test(q);
+  const searchQuery = looksComplete ? q : `${q}, Queensland, Australia`;
+
   const url = new URL(NOMINATIM);
   url.searchParams.set("format", "json");
-  url.searchParams.set("q", `${q}, Queensland, Australia`);
+  url.searchParams.set("q", searchQuery);
   url.searchParams.set("limit", "6");
   url.searchParams.set("countrycodes", "au");
   url.searchParams.set("viewbox", viewbox);

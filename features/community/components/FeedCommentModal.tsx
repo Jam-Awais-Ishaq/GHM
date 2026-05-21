@@ -1,9 +1,14 @@
 "use client";
 
 import { X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 
+import { ApiError } from "@/api/inspector";
+import { createCommunityPost } from "@/api/routes/community.api";
+import type { ApiCommunityPost } from "@/api/types/community";
+import { routes } from "@/config/routes";
 import {
   FEED_CATEGORIES,
   type FeedCategoryId,
@@ -12,6 +17,8 @@ import {
   FeedRichTextEditor,
   isRichTextEmpty,
 } from "@/features/community/components/FeedRichTextEditor";
+import { buildCreatePostPayload } from "@/features/community/lib/feedComposerPayload";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
@@ -31,6 +38,9 @@ export type FeedCommentModalProps = {
   defaultTitle?: string;
   defaultCategory?: FeedCategoryId;
   defaultDetailsHtml?: string;
+  /** When false, submit stays local-only (e.g. mock edit flow). */
+  submitToApi?: boolean;
+  onPostCreated?: (post: ApiCommunityPost) => void;
 };
 
 export function FeedCommentModal({
@@ -40,6 +50,8 @@ export function FeedCommentModal({
   defaultTitle = "",
   defaultCategory,
   defaultDetailsHtml = "",
+  submitToApi = true,
+  onPostCreated,
 }: FeedCommentModalProps) {
   const titleId = useId();
 
@@ -65,11 +77,14 @@ export function FeedCommentModal({
 
   const ui = (
     <FeedCommentModalForm
+      key={open ? `${mode}-${defaultTitle}-${defaultCategory ?? ""}` : "closed"}
       titleId={titleId}
       mode={mode}
       defaultTitle={defaultTitle}
       defaultCategory={defaultCategory}
       defaultDetailsHtml={defaultDetailsHtml}
+      submitToApi={submitToApi}
+      onPostCreated={onPostCreated}
       onClose={onClose}
     />
   );
@@ -84,6 +99,8 @@ type FeedCommentModalFormProps = {
   defaultTitle: string;
   defaultCategory?: FeedCategoryId;
   defaultDetailsHtml: string;
+  submitToApi: boolean;
+  onPostCreated?: (post: ApiCommunityPost) => void;
   onClose: () => void;
 };
 
@@ -93,21 +110,60 @@ function FeedCommentModalForm({
   defaultTitle,
   defaultCategory,
   defaultDetailsHtml,
+  submitToApi,
+  onPostCreated,
   onClose,
 }: FeedCommentModalFormProps) {
+  const { isSignedIn } = useAuth();
   const isFeed = mode === "feed";
   const [title, setTitle] = useState(isFeed ? defaultTitle : "");
   const [category, setCategory] = useState<FeedCategoryId>(defaultCategory ?? "finds");
   const [comment, setComment] = useState(isFeed ? defaultDetailsHtml : "");
   const [commentError, setCommentError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = (e: FormEvent) => {
+  const loginHref = `${routes.login}?returnTo=${encodeURIComponent(routes.community)}`;
+
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (isRichTextEmpty(comment)) {
       setCommentError(true);
       return;
     }
     setCommentError(false);
+
+    if (isFeed && submitToApi) {
+      if (!isSignedIn) {
+        setError("Login to post to the feed.");
+        return;
+      }
+      const titleTrimmed = title.trim();
+      if (!titleTrimmed) return;
+
+      const payload = buildCreatePostPayload(comment, category, titleTrimmed);
+      if (!payload.body) {
+        setCommentError(true);
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const res = await createCommunityPost(payload);
+        onPostCreated?.(res.data);
+        onClose();
+      } catch (err) {
+        setError(
+          err instanceof ApiError ? err.message : "Could not post. Please try again.",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     console.info(
       isFeed ? "Feed post:" : "Feed comment:",
       isFeed
@@ -118,7 +174,11 @@ function FeedCommentModalForm({
   };
 
   const heading = isFeed ? "Add feed" : "Add comment";
-  const submitLabel = isFeed ? "Post feed" : "Post comment";
+  const submitLabel = submitting ? "Posting…" : isFeed ? "Post feed" : "Post comment";
+  const canSubmit =
+    !submitting &&
+    (isFeed ? title.trim().length > 0 : true) &&
+    !isRichTextEmpty(comment);
 
   return (
     <>
@@ -236,9 +296,21 @@ function FeedCommentModalForm({
             ) : null}
           </div>
 
+          {error ? (
+            <p className="mb-3 text-sm text-red-600" role="alert">
+              {error}{" "}
+              {!isSignedIn ? (
+                <Link href={loginHref} className="font-semibold underline underline-offset-2">
+                  Login
+                </Link>
+              ) : null}
+            </p>
+          ) : null}
+
           <button
             type="submit"
-            className="flex h-12 min-h-12 w-full shrink-0 items-center justify-center rounded-2xl text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(255,87,34,0.35)] transition hover:brightness-105 active:scale-[0.99]"
+            disabled={!canSubmit}
+            className="flex h-12 min-h-12 w-full shrink-0 items-center justify-center rounded-2xl text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(255,87,34,0.35)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             style={{ backgroundColor: ACCENT }}
           >
             {submitLabel}

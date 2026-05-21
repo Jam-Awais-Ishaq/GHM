@@ -4,14 +4,29 @@ export type PendingSubmission = {
   price: number;
   dish: string;
   suburb: string;
+  imageUrl?: string | null;
 };
 
-export type FlaggedListing = {
+export type ReportedListing = {
   id: string;
+  mealId: number;
+  restaurantId: number;
   restaurant: string;
-  reason: string;
+  dish: string;
+  price: number;
+  suburb: string;
+  imageUrl?: string | null;
   flagCount: number;
+  isHidden: boolean;
+  latestReason: string;
+  reasons: string[];
 };
+
+/** @deprecated Use API-backed reported listings on submissions queue. */
+export type FlaggedListing = Pick<
+  ReportedListing,
+  "id" | "restaurant" | "flagCount"
+> & { reason: string };
 
 export const PENDING_SUBMISSIONS: PendingSubmission[] = [
   {
@@ -30,11 +45,4 @@ export const PENDING_SUBMISSIONS: PendingSubmission[] = [
   },
 ];
 
-export const FLAGGED_LISTINGS: FlaggedListing[] = [
-  {
-    id: "flag-1",
-    restaurant: "Pho Thanh Long",
-    reason: "Price has gone up",
-    flagCount: 4,
-  },
-];
+export const FLAGGED_LISTINGS: FlaggedListing[] = [];

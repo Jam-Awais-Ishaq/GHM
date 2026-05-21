@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { ThumbsUp } from "lucide-react";
 
 import { RestaurantImage } from "@/features/restaurants/components/RestaurantImage";
+import { useMealVoteTotals } from "@/features/restaurants/hooks/useMealVoteTotals";
 import { formatDistanceKm } from "@/features/restaurants/utils/distance";
 import type { RestaurantWithDistance } from "@/features/restaurants/types/restaurant";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
@@ -46,6 +49,11 @@ export function RestaurantPreviewCard({
   compact,
   className,
 }: RestaurantPreviewCardProps) {
+  const mealId = Number.parseInt(restaurant.id, 10);
+  const { netScoreLabel, isLoading: votesLoading } = useMealVoteTotals(
+    Number.isFinite(mealId) ? mealId : 0,
+  );
+
   const distRaw = restaurant.distanceKm;
   const dist =
     distRaw != null &&
@@ -86,7 +94,8 @@ export function RestaurantPreviewCard({
           {dist ? ` · ${dist}` : ""}
           <span className="whitespace-nowrap">
             {" "}
-            · <span className="text-amber-500">👍</span> +{restaurant.netScore}
+            · <span className="text-amber-500">👍</span>{" "}
+            {votesLoading ? "…" : netScoreLabel}
           </span>
         </p>
       </div>
@@ -110,7 +119,7 @@ export function RestaurantPreviewCard({
         </p>
         <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-[#FF5722]">
           <ThumbsUp className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} aria-hidden />
-          +{restaurant.netScore}
+          {votesLoading ? "…" : netScoreLabel}
         </p>
       </div>
     </>

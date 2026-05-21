@@ -2,22 +2,19 @@
 
 import { ChevronRight, ClipboardList, LogOut, Mail, Shield, User, X } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  signOut,
-  updateNickname,
-  type UpdateNicknameState,
-} from "@/features/auth/actions/auth";
+import { updateProfileName } from "@/api/routes/profile.api";
+import { ApiError } from "@/api/inspector";
+import { syncProfileNickname } from "@/features/auth/actions/auth";
+import { useSignOut } from "@/features/auth/hooks/useSignOut";
 import { routes } from "@/config/routes";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
-const initialNicknameState: UpdateNicknameState = {};
-
 type ProfilePanelContentProps = {
   variant?: "page" | "sidebar";
   onClose?: () => void;
@@ -52,11 +49,11 @@ export function ProfilePanelContent({
 }: ProfilePanelContentProps) {
   const router = useRouter();
   const { session, isAdmin } = useAuth();
+  const { signOut, pending: signOutPending } = useSignOut();
   const [nicknameDraft, setNicknameDraft] = useState("");
-  const [state, formAction, pending] = useActionState(
-    updateNickname,
-    initialNicknameState,
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [pending, setPending] = useState(false);
   const isSidebar = variant === "sidebar";
 
   useEffect(() => {
@@ -65,11 +62,26 @@ export function ProfilePanelContent({
     }
   }, [session]);
 
-  useEffect(() => {
-    if (state.success) {
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+    setPending(true);
+    try {
+      await updateProfileName(nicknameDraft.trim());
+      const result = await syncProfileNickname(nicknameDraft);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setSuccess(true);
       router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save profile.");
+    } finally {
+      setPending(false);
     }
-  }, [state.success, router]);
+  }
 
   if (!session) {
     return null;
@@ -130,7 +142,7 @@ export function ProfilePanelContent({
         <ActiveBadge />
       </div>
 
-      <form action={formAction} className="mt-5 space-y-4">
+      <form onSubmit={(e) => void handleSave(e)} className="mt-5 space-y-4">
         <div>
           <label
             htmlFor="profile-nickname"
@@ -183,12 +195,12 @@ export function ProfilePanelContent({
           <ChevronRight className="h-5 w-5 shrink-0 text-neutral-400" strokeWidth={2} aria-hidden />
         </Link>
 
-        {state.error ? (
+        {error ? (
           <p className="text-sm font-medium text-red-600" role="alert">
-            {state.error}
+            {error}
           </p>
         ) : null}
-        {state.success ? (
+        {success ? (
           <p className="text-sm font-medium text-[#e64a19]" role="status">
             Changes saved.
           </p>
@@ -209,15 +221,17 @@ export function ProfilePanelContent({
   );
 
   const logoutButton = (
-    <form action={signOut} className="shrink-0">
+    <div className="shrink-0">
       <button
-        type="submit"
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white text-sm font-semibold text-red-600 transition hover:bg-red-50/50"
+        type="button"
+        onClick={() => void signOut()}
+        disabled={signOutPending}
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white text-sm font-semibold text-red-600 transition hover:bg-red-50/50 disabled:opacity-60"
       >
         <LogOut className="h-4 w-4" strokeWidth={2} aria-hidden />
-        Log out
+        {signOutPending ? "Signing out…" : "Log out"}
       </button>
-    </form>
+    </div>
   );
 
   if (isSidebar) {

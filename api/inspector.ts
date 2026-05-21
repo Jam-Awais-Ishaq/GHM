@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { getBackendAccessToken } from "@/lib/auth/backendAccessToken";
 
 export class ApiError extends Error {
   constructor(
@@ -24,9 +25,17 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   const url = `${env.apiBaseUrl}${path}`;
+  const headers = new Headers(options.headers);
+  if (options.credentials === "include") {
+    const token = getBackendAccessToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
   const res = await fetch(url, {
     method: options.method ?? "GET",
-    headers: options.headers,
+    headers,
     body: options.body,
     // Nearby/listings are public; use credentials: "include" only for auth routes.
     credentials: options.credentials ?? "omit",

@@ -1,32 +1,84 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import { MapPin, ThumbsUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { MapPin } from "lucide-react";
 
+import { getRestaurantRankings } from "@/api/routes/ranking.api";
 import { DropFeedPenButton } from "@/components/layout/DropFeedPenButton";
 import { PUBLIC_PAGE_HEADER_PT } from "@/components/layout/PublicListPageShell";
 import { siteConfig } from "@/config/site";
-import { routes } from "@/config/routes";
-import { MOCK_RESTAURANTS } from "@/features/restaurants/data/mock-restaurants";
-import { formatPriceCompact } from "@/lib/utils/formatCurrency";
+import { RankingRestaurantCard } from "@/features/rankings/components/RankingRestaurantCard";
+import { useRankingFilters } from "@/features/rankings/hooks/useRankingFilters";
+import { getRankingBannerSubtitle } from "@/features/rankings/lib/rankingDisplay";
+import { useUserLocation } from "@/features/maps/hooks/useUserLocation";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
 const PAGE_BG = "#fff9f2";
-const VOTE_YELLOW = "#facc15";
-
-const FILTER_LABELS = ["Near me", "CBD", "West End", "Fortitude Valley", "Price checks"] as const;
-
-const DEMO_DISTANCES = ["500m", "850m", "320m", "1.2km", "650m", "780m", "240m", "910m"];
-
-function demoDistanceForIndex(i: number) {
-  return DEMO_DISTANCES[i % DEMO_DISTANCES.length];
-}
+const NEAR_ME_RADIUS_KM = 2;
+const RANKING_LIMIT = 10;
 
 export default function RankingsPage() {
-  const ranked = [...MOCK_RESTAURANTS].sort((a, b) => b.netScore - a.netScore);
   const [activeFilter, setActiveFilter] = useState(0);
+  const { filters } = useRankingFilters();
+  const { coords, state: locationState, refresh: refreshLocation } = useUserLocation();
+
+  const filter = filters[activeFilter] ?? filters[0];
+  const nearMeActive = Boolean(filter?.nearMe);
+  const canFetchRankings = !nearMeActive || coords != null;
+
+  useEffect(() => {
+    if (activeFilter >= filters.length) setActiveFilter(0);
+  }, [activeFilter, filters.length]);
+
+  useEffect(() => {
+    if (nearMeActive && !coords && locationState.status !== "loading") {
+      refreshLocation();
+    }
+  }, [nearMeActive, coords, locationState.status, refreshLocation]);
+
+  const {
+    data: rankingRes,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: [
+      "ranking-restaurants",
+      filter?.id,
+      filter?.sortBy,
+      filter?.suburb,
+      nearMeActive,
+      coords?.lat,
+      coords?.lng,
+    ],
+    queryFn: () =>
+      getRestaurantRankings({
+        sortBy: filter.sortBy,
+        suburb: filter.suburb,
+        limit: RANKING_LIMIT,
+        lat: nearMeActive ? coords?.lat : undefined,
+        lng: nearMeActive ? coords?.lng : undefined,
+        radiusKm: nearMeActive ? NEAR_ME_RADIUS_KM : undefined,
+      }),
+    enabled: Boolean(filter) && canFetchRankings,
+    staleTime: 60_000,
+  });
+
+  const rows = rankingRes?.data ?? [];
+  const apiSortBy = rankingRes?.sortBy ?? filter?.sortBy ?? "votes";
+
+  const contextBanner = useMemo(() => {
+    if (!rankingRes?.context) {
+      return { title: "Top cheap eats", subtitle: "Highest scores first" };
+    }
+    const { label, nearMe, radiusKm } = rankingRes.context;
+    const areaLabel = filter?.label === "Near me" ? "Near you" : label;
+    return {
+      title: `${areaLabel} · Top ${rankingRes.count}`,
+      subtitle: getRankingBannerSubtitle(apiSortBy, { nearMe, radiusKm }),
+    };
+  }, [rankingRes, apiSortBy, filter?.label]);
 
   return (
     <div
@@ -56,7 +108,9 @@ export default function RankingsPage() {
           <DropFeedPenButton />
         </div>
         <div className="mx-auto mt-5 w-full min-w-0 max-w-xl px-4 sm:mt-6 sm:px-5">
-          <h2 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-[1.65rem]">Top cheap eats</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-[1.65rem]">
+            Top cheap eats
+          </h2>
           <p className="mt-1 inline-block w-fit max-w-full text-balance text-sm leading-snug text-neutral-600">
             Ranked by the community. No corporate sell-outs.
           </p>
@@ -72,11 +126,11 @@ export default function RankingsPage() {
             "sm:flex-nowrap",
           )}
         >
-          {FILTER_LABELS.map((label, i) => {
+          {filters.map((item, i) => {
             const active = i === activeFilter;
             return (
               <button
-                key={label}
+                key={item.id}
                 type="button"
                 onClick={() => setActiveFilter(i)}
                 aria-pressed={active}
@@ -90,7 +144,7 @@ export default function RankingsPage() {
                 )}
                 style={active ? { backgroundColor: ACCENT } : undefined}
               >
-                {label}
+                {item.label}
               </button>
             );
           })}
@@ -99,66 +153,59 @@ export default function RankingsPage() {
         <div className="mb-4 flex gap-3 rounded-2xl border border-orange-200/65 bg-orange-50/85 p-4 shadow-sm sm:mb-5">
           <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-red-600" strokeWidth={2} aria-hidden />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-neutral-900">Near you · South Brisbane</p>
+            <p className="text-sm font-semibold text-neutral-900">{contextBanner.title}</p>
             <p className="mt-1 text-xs leading-snug text-neutral-600 sm:text-sm">
-              Top 10 within 2km, voted by 800+ locals
+              {contextBanner.subtitle}
             </p>
           </div>
         </div>
 
-        <ol className="w-full">
-          {ranked.map((r, index) => (
-            <li
-              key={r.id}
-              className="border-neutral-300/40 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-dotted"
-            >
-              <Link
-                href={routes.restaurant(r.id)}
-                className={cn(
-                  "group flex items-center gap-3.5 px-0 py-4 transition-colors",
-                  "hover:bg-neutral-900/[0.02] sm:gap-4 sm:py-[1.125rem]",
-                )}
+        {nearMeActive && !canFetchRankings ? (
+          <div className="mb-4 rounded-2xl border border-neutral-200/90 bg-white px-4 py-5 text-center shadow-sm">
+            <p className="text-sm text-neutral-700">
+              {locationState.status === "loading"
+                ? "Getting your location…"
+                : locationState.status === "denied"
+                  ? "Enable location to see rankings near you."
+                  : "Turn on location to see what's nearby."}
+            </p>
+            {locationState.status !== "loading" ? (
+              <button
+                type="button"
+                onClick={refreshLocation}
+                className="mt-3 rounded-full px-4 py-2 text-sm font-semibold text-white"
+                style={{ backgroundColor: ACCENT }}
               >
-                <div
-                  className={cn(
-                    "flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-neutral-200/70 bg-white",
-                    "shadow-[0_1px_3px_rgba(0,0,0,0.07)] sm:h-[4.75rem] sm:w-[4.75rem] sm:rounded-[1.125rem]",
-                  )}
-                  aria-hidden
-                >
-                  <span
-                    className="text-[1.65rem] font-bold leading-none tracking-tight sm:text-[2rem]"
-                    style={{ color: ACCENT }}
-                  >
-                    {index + 1}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                    <span className="text-[15px] font-bold tracking-tight text-neutral-900 sm:text-base">{r.name}</span>
-                    <span className="text-sm font-medium tabular-nums text-neutral-500">
-                      · {demoDistanceForIndex(index)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[13px] leading-snug text-neutral-500 sm:text-sm">{r.dish}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-[13px] font-bold text-neutral-900 sm:text-sm">{r.suburb}</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-neutral-900 px-2.5 py-1.5 text-xs font-bold shadow-sm">
-                      <ThumbsUp className="h-3.5 w-3.5 shrink-0" aria-hidden style={{ color: VOTE_YELLOW }} />
-                      <span className="tabular-nums" style={{ color: VOTE_YELLOW }}>
-                        +{r.netScore}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-                <div className="shrink-0 self-center pl-1 text-right">
-                  <span className="text-2xl font-bold leading-none tabular-nums tracking-tight sm:text-[1.75rem]" style={{ color: ACCENT }}>
-                    {formatPriceCompact(r.price)}
-                  </span>
-                </div>
-              </Link>
+                Enable location
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <ol className="w-full">
+          {canFetchRankings && isLoading ? (
+            <li className="py-8 text-center text-sm text-neutral-500">Loading rankings…</li>
+          ) : null}
+          {canFetchRankings && isError ? (
+            <li className="py-8 text-center text-sm text-red-600">
+              Could not load rankings. Try again later.
             </li>
-          ))}
+          ) : null}
+          {canFetchRankings && !isLoading && !isError && rows.length === 0 ? (
+            <li className="py-8 text-center text-sm text-neutral-500">
+              No ranked spots in this area yet.
+            </li>
+          ) : null}
+          {canFetchRankings && !isLoading && !isError
+            ? rows.map((row) => (
+                <li
+                  key={row.restaurantId}
+                  className="border-neutral-300/40 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-dotted"
+                >
+                  <RankingRestaurantCard row={row} />
+                </li>
+              ))
+            : null}
         </ol>
       </main>
     </div>

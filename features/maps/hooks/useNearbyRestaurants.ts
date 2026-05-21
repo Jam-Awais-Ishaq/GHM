@@ -20,7 +20,8 @@ export function useNearbyRestaurants(
       filters.cuisineId,
     ],
     queryFn: () => fetchMapListings(searchCenter, filters),
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const restaurants: Restaurant[] = query.data ?? [];

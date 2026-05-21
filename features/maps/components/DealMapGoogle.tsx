@@ -6,7 +6,7 @@ import {
   Map,
   useMap,
 } from "@vis.gl/react-google-maps";
-import { Crown } from "lucide-react";
+import { FaCrown } from "react-icons/fa";
 import { useEffect, useMemo } from "react";
 
 import { env } from "@/config/env";
@@ -105,16 +105,17 @@ function PriceMarker({
   showRouteLabels: boolean;
   onSelect: DealMapProps["onSelect"];
 }) {
-  const { price, isHotDeal, isTopRated, id } = restaurant;
+  const { price, isHotDeal, isTopRated, isFeatured, id } = restaurant;
   const label = formatPriceCompact(price);
+  const isFeaturedPin = Boolean(isFeatured) || Boolean(isTopRated);
 
-  const tailFill = isTopRated ? "#171717" : selected ? "#E53935" : "#FF5722";
+  const tailFill = isFeaturedPin ? "#171717" : selected ? "#E53935" : "#FF5722";
 
   return (
     <AdvancedMarker
       position={restaurant.position}
       onClick={() => onSelect(id)}
-      zIndex={selected ? 50 : isTopRated ? 20 : 10}
+      zIndex={selected ? 50 : isFeaturedPin ? 25 : 10}
     >
       <div
         className={cn(
@@ -128,10 +129,9 @@ function PriceMarker({
             aria-hidden
           />
         )}
-        {isTopRated && (
-          <Crown
-            className="absolute -top-4 z-[2] h-[18px] w-[18px] text-amber-400 drop-shadow"
-            strokeWidth={2.2}
+        {isFeaturedPin && (
+          <FaCrown
+            className="absolute -top-8 z-[2] h-9 w-9 text-amber-400 drop-shadow"
             aria-hidden
           />
         )}
@@ -142,13 +142,13 @@ function PriceMarker({
         )}
         <div
           className={cn(
-            "relative z-[1] px-2.5 pb-1.5 pt-1.5 text-[13px] font-extrabold leading-none text-white",
-            isTopRated
-              ? "rounded-[18px] border-2 border-amber-400/90 bg-neutral-900"
+            "relative z-[1] px-2.5 pb-1.5 pt-1.5 text-[13px] font-extrabold leading-none",
+            isFeaturedPin
+              ? "rounded-[18px] border-2 border-amber-400 bg-neutral-900 text-amber-400"
               : selected
-                ? "rounded-[18px] border border-red-700/25 bg-[#E53935] shadow-[0_0_0_3px_rgba(255,255,255,0.35)]"
-                : "rounded-[18px] border border-black/[0.06] bg-[#FF5722]",
-            isHotDeal && !selected && "shadow-[0_0_18px_rgba(239,68,68,0.5)]",
+                ? "rounded-[18px] border border-red-700/25 bg-[#E53935] text-white shadow-[0_0_0_3px_rgba(255,255,255,0.35)]"
+                : "rounded-[18px] border border-black/[0.06] bg-[#FF5722] text-white",
+            isHotDeal && !selected && !isFeaturedPin && "shadow-[0_0_18px_rgba(239,68,68,0.5)]",
           )}
         >
           {label}

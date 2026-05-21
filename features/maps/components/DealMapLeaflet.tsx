@@ -34,23 +34,24 @@ function priceTeardropIcon(
   selected: boolean,
 ): L.DivIcon {
   const label = formatPriceCompact(restaurant.price);
-  const topRated = restaurant.isTopRated;
-  const hot = restaurant.isHotDeal && !selected;
+  const featuredPin = Boolean(restaurant.isFeatured) || Boolean(restaurant.isTopRated);
+  const hot = restaurant.isHotDeal && !selected && !featuredPin;
 
-  const fill = topRated ? "#171717" : selected ? "#E53935" : ACCENT;
-  const stroke = topRated ? "rgba(251,191,36,0.95)" : selected ? "rgba(185,28,28,0.35)" : "rgba(0,0,0,0.06)";
-  const strokeW = topRated ? 2 : selected ? 1 : 1;
+  const fill = featuredPin ? "#171717" : selected ? "#E53935" : ACCENT;
+  const stroke = featuredPin ? "rgba(251,191,36,0.95)" : selected ? "rgba(185,28,28,0.35)" : "rgba(0,0,0,0.06)";
+  const strokeW = featuredPin ? 2 : selected ? 1 : 1;
+  const textColor = featuredPin ? "#facc15" : "#ffffff";
   const hotGlow = hot ? "0 0 16px 3px rgba(239,68,68,0.45), " : "";
   const selectGlow = selected
-    ? topRated
+    ? featuredPin
       ? "0 0 0 3px rgba(253,224,71,0.45), 0 0 20px rgba(251,191,36,0.28), "
       : "0 0 0 4px rgba(248,113,113,0.7), 0 0 22px rgba(239,68,68,0.42), "
     : "";
   const baseSh = "0 4px 12px rgba(0,0,0,0.28)";
   const scale = selected ? "scale(1.06)" : "scale(1)";
 
-  const crown = topRated
-    ? `<span style="position:absolute;left:50%;top:-16px;transform:translateX(-50%);font-size:15px;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35));line-height:1">👑</span>`
+  const crown = featuredPin
+    ? `<span style="position:absolute;left:50%;top:-32px;transform:translateX(-50%);line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35))"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" width="36" height="36" fill="#facc15" aria-hidden="true"><path d="M528 448H112c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h416c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm64-320c-26.5 0-48 21.5-48 48 0 7.1 1.6 13.7 4.4 19.8L476 239.2c-15.4 9.2-35.3 4-44.2-11.6L350.3 85C361 76.2 368 63 368 48c0-26.5-21.5-48-48-48s-48 21.5-48 48c0 15 7 28.2 17.7 37l-81.5 142.6c-8.9 15.6-28.9 20.8-44.2 11.6l-72.3-43.4c2.7-6 4.4-12.7 4.4-19.8 0-26.5-21.5-48-48-48S0 149.5 0 176s21.5 48 48 48c2.6 0 5.2-.4 7.7-.8L128 416h384l72.3-192.8c2.5.4 5.1.8 7.7.8 26.5 0 48-21.5 48-48s-21.5-48-48-48z"/></svg></span>`
     : "";
 
   const html = `
@@ -59,7 +60,7 @@ function priceTeardropIcon(
       <div style="
         position:relative;
         background:${fill};
-        color:#fff;
+        color:${textColor};
         font-weight:800;
         font-size:13px;
         letter-spacing:-0.02em;
@@ -81,8 +82,8 @@ function priceTeardropIcon(
   return L.divIcon({
     html,
     className: "ghm-leaflet-marker",
-    iconSize: [52, 62],
-    iconAnchor: [26, 58],
+    iconSize: featuredPin ? [56, 78] : [52, 62],
+    iconAnchor: featuredPin ? [28, 72] : [26, 58],
   });
 }
 
@@ -234,7 +235,9 @@ export function DealMapLeaflet({
               position={[r.position.lat, r.position.lng]}
               icon={icons.get(r.id) ?? priceTeardropIcon(r, selectedId === r.id)}
               eventHandlers={{ click: () => onSelect(r.id) }}
-              zIndexOffset={selectedId === r.id ? 800 : r.isTopRated ? 400 : 0}
+              zIndexOffset={
+                selectedId === r.id ? 800 : r.isFeatured || r.isTopRated ? 400 : 0
+              }
             />
           );
         })}

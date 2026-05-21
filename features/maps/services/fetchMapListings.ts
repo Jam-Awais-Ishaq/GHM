@@ -1,5 +1,4 @@
-import { filterListings } from "@/api/routes/listings.api";
-import { getNearbyListings } from "@/api/routes/nearby.api";
+import { filterListings, getListings } from "@/api/routes/listings.api";
 import { nearbySearchConfig } from "@/config/nearbySearch";
 import { TOP_RATED_MIN_NET_SCORE } from "@/constants/limits";
 import type {
@@ -14,7 +13,7 @@ import {
   maxPriceForFilter,
 } from "@/features/restaurants/utils/listingFilters";
 import { mapFilterListingToRestaurants } from "@/features/restaurants/utils/mapListingFilter";
-import { mapNearbyListingsToRestaurants } from "@/features/restaurants/utils/mapNearbyListing";
+import { mapListingRowsToRestaurants } from "@/features/restaurants/utils/mapListings";
 
 function withinRadiusKm(list: Restaurant[], center: LatLng, radiusKm: number): Restaurant[] {
   return list.filter((r) => haversineKm(center, r.position) <= radiusKm);
@@ -51,15 +50,11 @@ export async function fetchMapListings(
     );
   }
 
-  const nearbyRes = await getNearbyListings(
-    searchCenter.lat,
-    searchCenter.lng,
-    radiusKm,
-  );
-  if (!nearbyRes.success) return [];
+  const listingsRes = await getListings();
+  if (!listingsRes.success) return [];
 
   let list = withinRadiusKm(
-    mapNearbyListingsToRestaurants(nearbyRes.data),
+    mapListingRowsToRestaurants(listingsRes.data),
     searchCenter,
     radiusKm,
   );

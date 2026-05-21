@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, Info, ThumbsUp } from "lucide-react";
 
@@ -11,20 +11,35 @@ import {
   PublicListPageShell,
 } from "@/components/layout/PublicListPageShell";
 import { routes } from "@/config/routes";
-import { MOCK_RESTAURANTS } from "@/features/restaurants/data/mock-restaurants";
+import {
+  clearAllSavedPlaces,
+  getSavedPlaces,
+  SAVED_PLACES_CHANGED_EVENT,
+  type SavedPlace,
+} from "@/lib/saved/savedPlaces";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils/cn";
 
 const VOTE_YELLOW = "#facc15";
-const DEMO_DISTANCES = ["500m", "850m", "320m", "1.2km"] as const;
-
-const SAVED_IDS = ["momo-house", "sushi-dlite", "hello-banh-mi", "cheap-dumplings"] as const;
 
 export default function SavedPage() {
   const [brokiesOpen, setBrokiesOpen] = useState(false);
-  const saved = SAVED_IDS.map((id) => MOCK_RESTAURANTS.find((r) => r.id === id)).filter(
-    (r): r is NonNullable<typeof r> => Boolean(r),
-  );
+  const [saved, setSaved] = useState<SavedPlace[]>([]);
+
+  const refresh = useCallback(() => {
+    setSaved(getSavedPlaces());
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const onChange = () => refresh();
+    window.addEventListener(SAVED_PLACES_CHANGED_EVENT, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(SAVED_PLACES_CHANGED_EVENT, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  }, [refresh]);
 
   return (
     <PublicListPageShell
@@ -54,36 +69,37 @@ export default function SavedPage() {
       </div>
 
       <ul className="flex flex-col gap-3">
-        {saved.map((r, index) => (
+        {saved.length === 0 ? (
+          <li className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-4 py-10 text-center text-sm text-neutral-600">
+            No saved places yet. Tap the heart on a listing from the map.
+          </li>
+        ) : null}
+        {saved.map((r) => (
           <li key={r.id}>
             <Link
-              href={routes.restaurant(r.id)}
+              href={routes.restaurant(r.restaurantId ?? r.id)}
               className={cn(
                 "flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3.5 shadow-sm",
                 "transition hover:border-neutral-300 hover:shadow-md active:scale-[0.995]",
               )}
             >
-              <div
-                className="h-16 w-16 shrink-0 rounded-xl border border-neutral-200/70 bg-neutral-100"
-                aria-hidden
-              />
+              {r.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={r.imageUrl}
+                  alt=""
+                  className="h-16 w-16 shrink-0 rounded-xl border border-neutral-200/70 object-cover"
+                />
+              ) : (
+                <div
+                  className="h-16 w-16 shrink-0 rounded-xl border border-neutral-200/70 bg-neutral-100"
+                  aria-hidden
+                />
+              )}
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-[15px] font-bold text-neutral-900">{r.name}</span>
-                  <span className="text-sm font-medium text-neutral-500">
-                    · {DEMO_DISTANCES[index % DEMO_DISTANCES.length]}
-                  </span>
-                </div>
+                <p className="text-[15px] font-bold text-neutral-900">{r.name}</p>
                 <p className="mt-0.5 text-sm text-neutral-500">{r.dish}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[13px] font-bold text-neutral-900">{r.suburb}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-neutral-900 px-2.5 py-1 text-xs font-bold">
-                    <ThumbsUp className="h-3.5 w-3.5 shrink-0" style={{ color: VOTE_YELLOW }} aria-hidden />
-                    <span className="tabular-nums" style={{ color: VOTE_YELLOW }}>
-                      +{r.netScore}
-                    </span>
-                  </span>
-                </div>
+                <p className="mt-2 text-[13px] font-bold text-neutral-900">{r.suburb}</p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2 self-stretch justify-between py-0.5">
                 <span
@@ -104,12 +120,18 @@ export default function SavedPage() {
         ))}
       </ul>
 
-      <button
-        type="button"
-        className="mt-5 w-full rounded-full border border-neutral-200/90 bg-white py-3.5 text-sm font-bold text-neutral-900 shadow-sm transition hover:bg-neutral-50 active:scale-[0.99]"
-      >
-        Clear all
-      </button>
+      {saved.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => {
+            clearAllSavedPlaces();
+            refresh();
+          }}
+          className="mt-5 w-full rounded-full border border-neutral-200/90 bg-white py-3.5 text-sm font-bold text-neutral-900 shadow-sm transition hover:bg-neutral-50 active:scale-[0.99]"
+        >
+          Clear all
+        </button>
+      ) : null}
     </PublicListPageShell>
   );
 }

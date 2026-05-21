@@ -6,18 +6,20 @@ import {
   ChevronLeft,
   Crown,
   ExternalLink,
-  Flag,
   Heart,
   MapPin,
-  ThumbsDown,
-  ThumbsUp,
 } from "lucide-react";
 import { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useSavedPlace } from "@/features/maps/hooks/useSavedPlace";
+import { FlagOutdatedReport } from "@/features/restaurants/components/FlagOutdatedReport";
+import { MealVoteCardsUI } from "@/features/restaurants/components/MealVoteCards";
+import { useMealVotes } from "@/features/restaurants/hooks/useMealVotes";
 import { RestaurantCommunityNotesSection } from "@/features/restaurants/components/RestaurantCommunityNotesSection";
 import { RestaurantImage } from "@/features/restaurants/components/RestaurantImage";
 import type { RestaurantWithDistance } from "@/features/restaurants/types/restaurant";
+import { restaurantToSavedPlace } from "@/lib/saved/savedPlaces";
 import { formatDistanceKm } from "@/features/restaurants/utils/distance";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
 import { formatRelativeDay } from "@/lib/utils/formatDate";
@@ -46,6 +48,11 @@ export function MapRestaurantSidePanel({
   anchor = null,
   className,
 }: MapRestaurantSidePanelProps) {
+  const mealId = Number.parseInt(r.id, 10);
+  const savedEntry = restaurantToSavedPlace(r);
+  const { saved, toggle: toggleSaved } = useSavedPlace(savedEntry);
+  const mealVotes = useMealVotes(Number.isFinite(mealId) ? mealId : 0);
+
   const distRaw = r.distanceKm;
   const dist =
     distRaw != null &&
@@ -57,7 +64,7 @@ export function MapRestaurantSidePanel({
   const verified = r.priceVerifiedAt
     ? `Price verified ${formatRelativeDay(new Date(r.priceVerifiedAt))}`
     : "Price not yet verified";
-  const featured = r.isTopRated || r.isHotDeal;
+  const featured = r.isFeatured || r.isTopRated || r.isHotDeal;
   const docked = anchor != null;
 
   const [layoutWide, setLayoutWide] = useState(() =>
@@ -137,10 +144,19 @@ export function MapRestaurantSidePanel({
               </button>
               <button
                 type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-neutral-700 shadow-md transition hover:bg-white"
-                aria-label="Save place"
+                onClick={toggleSaved}
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-md transition hover:bg-white",
+                  saved ? "text-[#FF5722]" : "text-neutral-700",
+                )}
+                aria-label={saved ? "Remove from saved" : "Save place"}
+                aria-pressed={saved}
               >
-                <Heart className="h-[18px] w-[18px]" strokeWidth={2} />
+                <Heart
+                  className={cn("h-[18px] w-[18px]", saved && "fill-current")}
+                  strokeWidth={2}
+                  aria-hidden
+                />
               </button>
             </div>
           </div>
@@ -161,7 +177,7 @@ export function MapRestaurantSidePanel({
                 {dist ? ` · ${dist}` : ""}
                 <span className="whitespace-nowrap">
                   {" "}
-                  · <span className="text-amber-500">👍</span> +{r.netScore}
+                  · <span className="text-amber-500">👍</span> {mealVotes.netScoreLabel}
                 </span>
               </p>
               <p className="max-w-full shrink-0 text-right text-neutral-700 sm:max-w-[11rem]">{r.dish}</p>
@@ -179,26 +195,9 @@ export function MapRestaurantSidePanel({
               {verified}
             </p>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-white px-2 py-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-                <ThumbsUp className="mx-auto h-5 w-5 text-amber-400" strokeWidth={2} aria-hidden />
-                <p className="mt-2 text-xs font-bold text-neutral-900">Worth it</p>
-                <p className="mt-1 text-base font-bold tabular-nums text-neutral-900">{r.worthIt}</p>
-              </div>
-              <div className="rounded-xl bg-white px-2 py-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-                <p className="text-lg font-bold leading-none tabular-nums" style={{ color: ACCENT }}>
-                  +{r.netScore}
-                </p>
-                <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-                  Net score
-                </p>
-              </div>
-              <div className="rounded-xl bg-white px-2 py-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-                <ThumbsDown className="mx-auto h-5 w-5 text-amber-400" strokeWidth={2} aria-hidden />
-                <p className="mt-2 text-xs font-bold text-neutral-900">Overrated</p>
-                <p className="mt-1 text-base font-bold tabular-nums text-neutral-900">{r.overrated}</p>
-              </div>
-            </div>
+            {Number.isFinite(mealId) ? (
+              <MealVoteCardsUI vote={mealVotes} variant="panel" className="mt-4" />
+            ) : null}
 
             <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
               <div className="flex gap-2.5 px-3.5 py-3">
@@ -221,18 +220,12 @@ export function MapRestaurantSidePanel({
               </a>
             </div>
 
-            <RestaurantCommunityNotesSection
-              restaurantId={r.id}
-              initialNotes={r.communityNotes ?? []}
-            />
+            <RestaurantCommunityNotesSection mealId={Number.parseInt(r.id, 10)} />
 
-            <button
-              type="button"
-              className="mt-6 flex items-center gap-2 text-xs font-medium text-neutral-500 transition hover:text-neutral-700"
-            >
-              <Flag className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-              Flag outdated info
-            </button>
+            <FlagOutdatedReport
+              mealId={Number.parseInt(r.id, 10)}
+              className="mt-6"
+            />
           </div>
         </div>
       </aside>

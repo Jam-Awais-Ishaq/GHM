@@ -114,3 +114,28 @@ body {
     transform: translateY(0);
   }
 }
+
+@keyframes ghm-hotdeal-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 25px -5px rgb(244 63 94 / 0.25);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 14px 32px -4px rgb(255 87 34 / 0.45);
+  }
+}
+
+/* Ending-soon badge: continuous zoom pulse (arbitrary Tailwind animate[] skips custom names) */
+.ghm-hotdeal-badge-pulse {
+  transform-origin: top right;
+  animation: ghm-hotdeal-pulse 1.25s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghm-hotdeal-badge-pulse {
+    animation: none;
+  }
+}

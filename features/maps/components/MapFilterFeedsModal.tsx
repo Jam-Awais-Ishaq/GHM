@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { Check, Flame, Star, X } from "lucide-react";
+import { Check, Star, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -34,9 +34,8 @@ const CUISINE_CHIPS: { id: CuisineFilterId; label: string }[] = [
 const SHOW_ROWS: {
   id: Exclude<ShowOnlyFeedsId, "all">;
   title: string;
-  kind: "flame" | "verified" | "star";
+  kind: "verified" | "star";
 }[] = [
-  { id: "hot", title: "Hot Deals (live specials)", kind: "flame" },
   { id: "verified", title: "Price verified in last 30 days", kind: "verified" },
   { id: "top50", title: "Top rated (vote score 50+)", kind: "star" },
 ];
@@ -71,17 +70,7 @@ function FilterChip({
   );
 }
 
-function ShowOnlyRowIcon({ kind, selected }: { kind: "flame" | "verified" | "star"; selected: boolean }) {
-  if (kind === "flame") {
-    return (
-      <Flame
-        className={cn("h-[19px] w-[19px] shrink-0", !selected && "text-orange-600")}
-        strokeWidth={2.35}
-        style={selected ? { color: ACCENT } : undefined}
-        aria-hidden
-      />
-    );
-  }
+function ShowOnlyRowIcon({ kind, selected }: { kind: "verified" | "star"; selected: boolean }) {
   if (kind === "verified") {
     if (selected) {
       return (
@@ -118,7 +107,7 @@ function ShowOnlyRow({
   onClick,
 }: {
   title: string;
-  kind: "flame" | "verified" | "star";
+  kind: "verified" | "star";
   selected: boolean;
   onClick: () => void;
 }) {

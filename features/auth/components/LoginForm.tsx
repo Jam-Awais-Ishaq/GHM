@@ -12,7 +12,25 @@ const initialState: SignInState = {};
 export function LoginForm() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") ?? "";
+  const linkError = searchParams.get("error");
   const [state, formAction, pending] = useActionState(signInWithEmail, initialState);
+
+  const errorMessage =
+    state.error ??
+    (linkError === "missing-email"
+      ? "Open the sign-in link from the same browser where you requested it, or request a new link."
+      : linkError === "verify-failed"
+        ? "That sign-in link is invalid or expired. Request a new one."
+        : undefined);
+
+  if (state.success) {
+    return (
+      <div className="w-full max-w-sm rounded-2xl border border-orange-100 bg-orange-50/60 px-4 py-5">
+        <p className="text-sm font-medium text-neutral-900">Check your email</p>
+        <p className="mt-2 text-sm leading-relaxed text-neutral-600">{state.success}</p>
+      </div>
+    );
+  }
 
   return (
     <form action={formAction} className="w-full max-w-sm">
@@ -33,9 +51,9 @@ export function LoginForm() {
           "placeholder:text-neutral-400 focus:border-[#FF5722]/50 focus:ring-2 focus:ring-[#FF5722]/20",
         )}
       />
-      {state.error ? (
+      {errorMessage ? (
         <p className="mt-2 text-sm font-medium text-red-600" role="alert">
-          {state.error}
+          {errorMessage}
         </p>
       ) : null}
       <Button
@@ -43,12 +61,10 @@ export function LoginForm() {
         className="mt-4 w-full rounded-2xl"
         disabled={pending}
       >
-        {pending ? "Signing in…" : "Continue with email"}
+        {pending ? "Sending link…" : "Continue with email"}
       </Button>
       <p className="mt-4 text-center text-xs leading-relaxed text-neutral-500">
-        Demo: use{" "}
-        <span className="font-semibold text-neutral-700">admin@guesshowmuch.app</span> for
-        admin access. Any other email signs in as a user.
+        We&apos;ll email you a one-time sign-in link. No password needed.
       </p>
     </form>
   );

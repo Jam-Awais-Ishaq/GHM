@@ -14,7 +14,8 @@ export function mapNearbyListingToRestaurant(row: NearbyListingDto): Restaurant 
     netScore: 0,
     worthIt: 0,
     overrated: 0,
-    isHotDeal: true,
+    isHotDeal: false,
+    isFeatured: Boolean(row.isFeatured),
   };
 }
 
