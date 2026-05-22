@@ -53,7 +53,7 @@ export function RankingRestaurantCard({ row }: RankingRestaurantCardProps) {
         <p className="mt-1 text-[13px] leading-snug text-neutral-500 sm:text-sm">{row.dishName}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="line-clamp-2 min-w-0 text-[13px] font-bold leading-snug text-neutral-900 sm:text-sm">
-            {row.address?.trim() || row.suburb}
+            {row.suburb}
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-neutral-900 px-2.5 py-1.5 text-xs font-bold shadow-sm">
             <ThumbsUp className="h-3.5 w-3.5 shrink-0" aria-hidden style={{ color: VOTE_YELLOW }} />

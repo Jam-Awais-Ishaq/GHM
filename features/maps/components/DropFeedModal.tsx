@@ -86,7 +86,7 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
   const [endTime, setEndTime] = useState("");
   const [dealDescription, setDealDescription] = useState("");
   const [countdownLabel, setCountdownLabel] = useState("");
-  const [photoName, setPhotoName] = useState<string | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,12 +122,21 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
       setEndTime("");
       setDealDescription("");
       setCountdownLabel("");
-      setPhotoName(null);
+      setPhotoPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setSubmitting(false);
       setError(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    };
+  }, [photoPreviewUrl]);
 
   useEffect(() => {
     if (!dealTimerEnabled || !endDate) {
@@ -501,18 +510,40 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
                 required
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  setPhotoName(f?.name ?? null);
+                  setPhotoPreviewUrl((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return f ? URL.createObjectURL(f) : null;
+                  });
                 }}
               />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "flex min-h-[8.5rem] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neutral-200/90 bg-orange-100/60 px-4 py-6 text-sm text-neutral-500 transition hover:border-neutral-300 hover:bg-orange-100/90",
+                  "relative flex w-full overflow-hidden rounded-2xl border-2 border-dashed border-neutral-200/90 bg-orange-100/60 text-sm text-neutral-500 transition hover:border-neutral-300 hover:bg-orange-100/90",
+                  photoPreviewUrl
+                    ? "h-[7.5rem] border-solid p-0"
+                    : "h-[7.5rem] flex-col items-center justify-center gap-1.5 px-4 py-3",
                 )}
               >
-                <Camera className="h-8 w-8 text-neutral-400" strokeWidth={1.5} />
-                <span>{photoName ? photoName : "Tap to add a photo"}</span>
+                {photoPreviewUrl ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photoPreviewUrl}
+                      alt="Selected meal photo preview"
+                      className="h-full w-full object-cover"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-neutral-900/55 px-3 py-2 text-center text-xs font-medium text-white">
+                      Tap to change photo
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="h-8 w-8 text-neutral-400" strokeWidth={1.5} />
+                    <span>Tap to add a photo</span>
+                  </>
+                )}
               </button>
             </div>
 

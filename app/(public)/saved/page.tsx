@@ -17,6 +17,7 @@ import {
   SAVED_PLACES_CHANGED_EVENT,
   type SavedPlace,
 } from "@/lib/saved/savedPlaces";
+import { extractSuburbLabel } from "@/lib/maps/extractSuburbLabel";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
 import { cn } from "@/lib/utils/cn";
 
@@ -99,7 +100,9 @@ export default function SavedPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-bold text-neutral-900">{r.name}</p>
                 <p className="mt-0.5 text-sm text-neutral-500">{r.dish}</p>
-                <p className="mt-2 text-[13px] font-bold text-neutral-900">{r.suburb}</p>
+                <p className="mt-2 text-[13px] font-bold text-neutral-900">
+                  {extractSuburbLabel(r.address || r.suburb)}
+                </p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2 self-stretch justify-between py-0.5">
                 <span

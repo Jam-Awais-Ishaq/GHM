@@ -153,6 +153,11 @@ export function MapExploreScreen() {
     searchInputRef.current?.blur();
   }, []);
 
+  const handleMapClick = useCallback(() => {
+    dismissSearch();
+    setSelectedRestaurantId(null);
+  }, [dismissSearch, setSelectedRestaurantId]);
+
   useEffect(() => {
     if (!searchFocused) return;
     const onKey = (e: KeyboardEvent) => {
@@ -536,7 +541,7 @@ export function MapExploreScreen() {
               onSelect={setSelectedRestaurantId}
               flyTo={flyTo}
               routeFrom={selectedRestaurantId ? distanceOrigin : null}
-              onMapClick={dismissSearch}
+              onMapClick={handleMapClick}
             />
           ) : (
             <MapLoadingSkeleton />
