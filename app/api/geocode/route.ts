@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { BRISBANE_BOUNDS } from "@/lib/maps/googleMaps";
+import { buildGeocodeQueries } from "@/lib/maps/geocodeQueries";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 
@@ -13,22 +14,16 @@ function inBrisbane(lat: number, lng: number): boolean {
   );
 }
 
-/** Proxy geocode so we can send a proper User-Agent (browser fetch cannot). */
-export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q")?.trim();
-  if (!q || q.length < 2) {
-    return NextResponse.json(null);
-  }
-
+async function geocodeOneQuery(searchQuery: string): Promise<{ lat: number; lng: number; label: string } | null> {
   const viewbox = `${BRISBANE_BOUNDS.west},${BRISBANE_BOUNDS.south},${BRISBANE_BOUNDS.east},${BRISBANE_BOUNDS.north}`;
 
   const looksComplete =
-    /,/.test(q) && /\b(australia|qld|queensland)\b/i.test(q);
-  const searchQuery = looksComplete ? q : `${q}, Queensland, Australia`;
+    /,/.test(searchQuery) && /\b(australia|qld|queensland)\b/i.test(searchQuery);
+  const q = looksComplete ? searchQuery : `${searchQuery}, Queensland, Australia`;
 
   const url = new URL(NOMINATIM);
   url.searchParams.set("format", "json");
-  url.searchParams.set("q", searchQuery);
+  url.searchParams.set("q", q);
   url.searchParams.set("limit", "6");
   url.searchParams.set("countrycodes", "au");
   url.searchParams.set("viewbox", viewbox);
@@ -44,28 +39,40 @@ export async function GET(req: NextRequest) {
       cache: "no-store",
     });
   } catch {
-    return NextResponse.json(null, { status: 502 });
+    return null;
   }
 
-  if (!res.ok) {
-    return NextResponse.json(null, { status: 502 });
-  }
+  if (!res.ok) return null;
 
   const data = (await res.json()) as { lat: string; lon: string; display_name: string }[];
-  if (!Array.isArray(data)) {
-    return NextResponse.json(null);
-  }
+  if (!Array.isArray(data)) return null;
 
   for (const row of data) {
     const lat = Number.parseFloat(row.lat);
     const lng = Number.parseFloat(row.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     if (inBrisbane(lat, lng)) {
-      return NextResponse.json({
-        lat,
-        lng,
-        label: row.display_name,
-      });
+      return { lat, lng, label: row.display_name };
+    }
+  }
+
+  return null;
+}
+
+/** Proxy geocode so we can send a proper User-Agent (browser fetch cannot). */
+export async function GET(req: NextRequest) {
+  const q = req.nextUrl.searchParams.get("q")?.trim();
+  if (!q || q.length < 2) {
+    return NextResponse.json(null);
+  }
+
+  const queries = buildGeocodeQueries(q);
+  const toTry = queries.length > 0 ? queries : [q];
+
+  for (const query of toTry) {
+    const hit = await geocodeOneQuery(query);
+    if (hit) {
+      return NextResponse.json(hit);
     }
   }
 

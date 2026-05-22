@@ -11,7 +11,9 @@ import {
   createCommunityPostComment,
   getCommunityPostComments,
 } from "@/api/routes/community.api";
-import { PUBLIC_PAGE_ACCENT } from "@/components/layout/PublicListPageShell";
+import { PUBLIC_PAGE_ACCENT, PUBLIC_PAGE_BG } from "@/components/layout/PublicListPageShell";
+
+const ACCENT = PUBLIC_PAGE_ACCENT;
 import { routes } from "@/config/routes";
 import {
   mapApiCommunityComment,
@@ -39,9 +41,10 @@ function UserAvatar({
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-neutral-600 text-sm font-bold text-white",
+        "flex shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
         className,
       )}
+      style={{ backgroundColor: ACCENT }}
       aria-hidden
     >
       {initial.slice(0, 1).toUpperCase()}
@@ -55,10 +58,10 @@ function CommentRow({ comment }: { comment: FeedPostComment }) {
       <UserAvatar initial={comment.initial} className="h-9 w-9" />
       <div className="min-w-0 flex-1">
         <p className="text-[13px]">
-          <span className="font-medium text-white/95">{comment.author}</span>
-          <span className="ml-2 text-white/45">{comment.ago}</span>
+          <span className="font-semibold text-neutral-900">{comment.author}</span>
+          <span className="ml-2 text-neutral-400">{comment.ago}</span>
         </p>
-        <p className="mt-1 text-sm leading-snug text-white/85">{comment.body}</p>
+        <p className="mt-1 text-sm leading-snug text-neutral-700">{comment.body}</p>
       </div>
     </li>
   );
@@ -165,7 +168,7 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
       <button
         type="button"
         aria-label="Close comments"
-        className="fixed inset-0 z-[998] bg-black/40 animate-[ghm-backdrop-in_0.2s_ease-out] motion-reduce:animate-none sm:bg-black/25"
+        className="fixed inset-0 z-[998] bg-neutral-900/20 animate-[ghm-backdrop-in_0.2s_ease-out] motion-reduce:animate-none sm:bg-neutral-900/15"
         onClick={submitting ? undefined : onClose}
       />
 
@@ -174,8 +177,8 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          "fixed z-[999] flex min-h-0 flex-col overflow-hidden rounded-2xl bg-[#212121] text-white",
-          "shadow-[0_8px_40px_rgba(0,0,0,0.45)]",
+          "fixed z-[999] flex min-h-0 flex-col overflow-hidden rounded-2xl border border-orange-200/80 bg-white text-neutral-900",
+          "shadow-[0_8px_40px_rgba(255,87,34,0.12),0_2px_12px_rgba(0,0,0,0.06)]",
           "motion-safe:animate-[ghm-slide-in-right_0.28s_cubic-bezier(0.22,1,0.36,1)_both] motion-reduce:animate-none",
           "max-sm:right-2 max-sm:left-2 max-sm:top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))]",
           "max-sm:bottom-[max(5.75rem,calc(env(safe-area-inset-bottom)+4.75rem))]",
@@ -183,15 +186,18 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
           "sm:h-[min(78dvh,640px)] sm:w-[min(100%,24rem)] sm:max-w-[402px]",
         )}
       >
-        <header className="flex shrink-0 items-center justify-between gap-2 px-4 py-3.5">
-          <h2 id={titleId} className="text-lg font-medium tracking-tight text-white">
+        <header
+          className="flex shrink-0 items-center justify-between gap-2 border-b border-orange-100 px-4 py-3.5"
+          style={{ backgroundColor: PUBLIC_PAGE_BG }}
+        >
+          <h2 id={titleId} className="text-lg font-bold tracking-tight text-neutral-900">
             Comments
           </h2>
           <div className="flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => setSort((s) => (s === "top" ? "newest" : "top"))}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 transition hover:bg-orange-50 hover:text-[#FF5722]"
               aria-label={sort === "top" ? "Sort by newest" : "Sort by top"}
               title={sort === "top" ? "Newest first" : "Oldest first"}
             >
@@ -201,7 +207,7 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 disabled:opacity-50"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 transition hover:bg-orange-50 hover:text-[#FF5722] disabled:opacity-50"
               aria-label="Close"
             >
               <X className="h-5 w-5" strokeWidth={2} />
@@ -209,13 +215,16 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-color:rgba(255,87,34,0.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-orange-200"
+          style={{ backgroundColor: PUBLIC_PAGE_BG }}
+        >
           {isLoading ? (
-            <p className="py-12 text-center text-sm text-white/50">Loading comments…</p>
+            <p className="py-12 text-center text-sm text-neutral-500">Loading comments…</p>
           ) : isError ? (
-            <p className="py-12 text-center text-sm text-red-400">Could not load comments.</p>
+            <p className="py-12 text-center text-sm text-red-600">Could not load comments.</p>
           ) : sortedComments.length === 0 ? (
-            <p className="py-12 text-center text-sm text-white/45">
+            <p className="py-12 text-center text-sm text-neutral-500">
               No comments yet.
             </p>
           ) : (
@@ -227,10 +236,14 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
           )}
         </div>
 
-        <footer className="shrink-0 border-t border-white/10 px-4 py-3">
+        <footer className="shrink-0 border-t border-orange-100 bg-white px-4 py-3">
           {!isSignedIn ? (
-            <p className="text-sm text-white/70">
-              <Link href={loginHref} className="font-medium text-white underline underline-offset-2">
+            <p className="text-sm text-neutral-600">
+              <Link
+                href={loginHref}
+                className="font-semibold underline underline-offset-2"
+                style={{ color: ACCENT }}
+              >
                 Sign in
               </Link>{" "}
               to comment
@@ -239,7 +252,7 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
             <form onSubmit={onSubmit} className="flex items-center gap-2.5">
               <UserAvatar
                 initial={userInitial}
-                className="h-9 w-9 ring-1 ring-white/10"
+                className="h-9 w-9 ring-2 ring-orange-100"
               />
               <label htmlFor="community-comments-input" className="sr-only">
                 Add a comment
@@ -252,13 +265,13 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Add a comment..."
                 disabled={submitting}
-                className="h-10 min-w-0 flex-1 rounded-full bg-[#3f3f3f] px-4 text-sm text-white outline-none transition placeholder:text-white/40 focus:ring-2 focus:ring-white/20 disabled:opacity-50"
+                className="h-10 min-w-0 flex-1 rounded-full border border-orange-200/90 bg-[#fff9f2] px-4 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-[#FF5722] focus:ring-2 focus:ring-[#FF5722]/25 disabled:opacity-50"
               />
               <button
                 type="submit"
                 disabled={!draft.trim() || submitting}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ backgroundColor: PUBLIC_PAGE_ACCENT }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ backgroundColor: ACCENT }}
                 aria-label={submitting ? "Sending" : "Send comment"}
               >
                 <Send className="h-[18px] w-[18px]" aria-hidden />
@@ -266,7 +279,7 @@ export function CommunityCommentsPanel({ open, post, onClose }: CommunityComment
             </form>
           )}
           {error ? (
-            <p className="mt-2 pl-[3.25rem] text-xs font-medium text-red-400" role="alert">
+            <p className="mt-2 pl-[3.25rem] text-xs font-medium text-red-600" role="alert">
               {error}
             </p>
           ) : null}

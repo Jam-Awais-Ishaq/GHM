@@ -25,7 +25,10 @@ export type FilterListingMeal = ListingMeal;
 export type FilterListingRestaurant = {
   id: number;
   name: string;
+  /** Display suburb label from server. */
   suburb: string;
+  /** Full address stored in DB. */
+  address?: string;
   latitude: number | null;
   longitude: number | null;
   meals: FilterListingMeal[];

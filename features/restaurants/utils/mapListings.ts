@@ -35,6 +35,10 @@ export function mapListingRowsToRestaurants(
     const meal = pickMapPinMeal(r.meals, maxPrice);
     if (!meal) continue;
 
+    const hasHotDeal = r.meals.some(
+      (m) => m.status === "APPROVED" && mealHasActiveHotDeal(m),
+    );
+
     out.push({
       id: String(meal.id),
       restaurantId: String(r.id),
@@ -42,13 +46,13 @@ export function mapListingRowsToRestaurants(
       dish: meal.dishName,
       price: meal.price,
       suburb: r.suburb,
-      address: r.suburb,
+      address: r.address ?? r.suburb,
       imageUrl: meal.image,
       position: { lat: r.latitude, lng: r.longitude },
       netScore: 0,
       worthIt: 0,
       overrated: 0,
-      isHotDeal: false,
+      isHotDeal: hasHotDeal,
       isFeatured: isMealFeaturedActive(meal),
     });
   }
@@ -70,7 +74,7 @@ export function mapSingleListingToRestaurant(row: FilterListingRestaurant): Rest
     dish: meal.dishName,
     price: meal.price,
     suburb: row.suburb,
-    address: row.suburb,
+    address: row.address ?? row.suburb,
     imageUrl: meal.image,
     position: { lat: row.latitude, lng: row.longitude },
     netScore: 0,

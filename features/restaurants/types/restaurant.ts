@@ -9,7 +9,7 @@ export type CuisineFilterId =
   | "bakery"
   | "burgers";
 
-export type ShowOnlyFeedsId = "all" | "verified" | "top50";
+export type ShowOnlyFeedsId = "all" | "hotDeals" | "verified" | "top50";
 
 export type LatLng = { lat: number; lng: number };
 

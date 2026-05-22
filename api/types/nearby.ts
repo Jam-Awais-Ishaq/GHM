@@ -2,6 +2,9 @@ export type NearbyListingDto = {
   id: number;
   restaurantName: string;
   dishName: string;
+  /** Display suburb label from server. */
+  suburb: string;
+  /** Full address stored in DB. */
   address: string;
   latitude: number;
   longitude: number;

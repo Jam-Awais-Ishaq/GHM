@@ -1,23 +1,48 @@
 import { nearbySearchConfig } from "@/config/nearbySearch";
 import type { LatLng } from "@/features/restaurants/types/restaurant";
+import { buildGeocodeQueries } from "@/lib/maps/geocodeQueries";
 
-/** Full street address e.g. "8 Bent St, Toowong QLD 4066, Australia" */
+export const DROP_FEED_SUBURB_ONLY_ERROR =
+  "Enter the full street address (e.g. 735 Beams Rd, Carseldine QLD 4034). Suburb names only (West End, Sunnybank, East End, etc.) are not accepted.";
+
+/** True when input looks like a real street address (not suburb name only). */
 export function isFullStreetAddress(input: string): boolean {
   const t = input.trim();
-  if (t.length < 10) return false;
-  if (/,/.test(t)) return true;
-  if (/^\d+\s+\S/.test(t)) return true;
-  if (
-    /\b(street|st|road|rd|avenue|ave|drive|dr|court|ct|parade|pde|lane|ln|way|blvd|boulevard|crescent|cres)\b/i.test(
+  if (!t || t.length < 6) return false;
+
+  const hasStreetNumber =
+    /\b\d{1,5}[A-Za-z]?\s+[A-Za-z]/.test(t) ||
+    /\b(?:shop|unit|suite|level|lot)\s*#?\s*\d+/i.test(t) ||
+    /\b\d+\s*\/\s*\d+/.test(t);
+
+  const hasStreetType =
+    /\b(street|st|road|rd|avenue|ave|drive|dr|court|ct|parade|pde|lane|ln|way|blvd|boulevard|crescent|cres|highway|hwy|terrace|tce)\b/i.test(
       t,
-    )
+    );
+
+  if (hasStreetNumber && (hasStreetType || /,/.test(t))) return true;
+  if (/^\d+\s+\S/.test(t) && hasStreetType) return true;
+  if (/,/.test(t) && /\b\d{4}\b/.test(t) && hasStreetNumber) return true;
+
+  if (
+    /\b(street|st|road|rd|avenue|ave|drive|dr|court|ct|parade|pde|lane|ln|way|blvd|boulevard|crescent|cres|highway|hwy|central|shop)\b/i.test(
+      t,
+    ) &&
+    /\d/.test(t)
   ) {
     return true;
   }
-  return /\b\d{4}\b/.test(t) && /\b(qld|queensland|australia)\b/i.test(t);
+
+  return false;
 }
 
-export async function geocodeAddress(query: string): Promise<LatLng | null> {
+export function isSuburbNameOnlyInput(input: string): boolean {
+  const raw = input.trim();
+  if (!raw) return true;
+  return !isFullStreetAddress(raw);
+}
+
+async function geocodeOneQuery(query: string): Promise<LatLng | null> {
   const res = await fetch(`/api/geocode?q=${encodeURIComponent(query.trim())}`);
   if (!res.ok) return null;
   const data = (await res.json()) as { lat?: number; lng?: number } | null;
@@ -27,7 +52,17 @@ export async function geocodeAddress(query: string): Promise<LatLng | null> {
   return null;
 }
 
-function resolveGpsCoords(): Promise<LatLng> {
+/** Client-side geocode (map search). Drop-a-feed uses server geocoding. */
+export async function geocodeAddress(query: string): Promise<LatLng | null> {
+  for (const q of buildGeocodeQueries(query)) {
+    const coords = await geocodeOneQuery(q);
+    if (coords) return coords;
+  }
+  return null;
+}
+
+/** Device GPS sent with submission (server uses geocoded address when valid). */
+export function getDropFeedClientCoords(): Promise<LatLng> {
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       resolve(nearbySearchConfig.listingsHub);
@@ -39,26 +74,4 @@ function resolveGpsCoords(): Promise<LatLng> {
       { enableHighAccuracy: true, maximumAge: 60_000, timeout: 12_000 },
     );
   });
-}
-
-/**
- * Full address in suburb field → geocode that location.
- * Suburb name only (West End, etc.) → live GPS where the user is standing.
- */
-export async function resolveDropFeedLocation(
-  suburbInput: string,
-): Promise<{ coords: LatLng; mode: "address" | "gps" }> {
-  const trimmed = suburbInput.trim();
-
-  if (isFullStreetAddress(trimmed)) {
-    const geocoded = await geocodeAddress(trimmed);
-    if (geocoded) {
-      return { coords: geocoded, mode: "address" };
-    }
-    throw new Error(
-      "Could not find that address. Check spelling or use a suburb name with your current location.",
-    );
-  }
-
-  return { coords: await resolveGpsCoords(), mode: "gps" };
 }

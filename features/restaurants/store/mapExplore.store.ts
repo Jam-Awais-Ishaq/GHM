@@ -150,6 +150,7 @@ function applyCuisineFilter(list: Restaurant[], id: CuisineFilterId): Restaurant
 
 function applyShowOnlyFilter(list: Restaurant[], mode: ShowOnlyFeedsId): Restaurant[] {
   if (mode === "all") return list;
+  if (mode === "hotDeals") return list.filter((r) => r.isHotDeal);
   if (mode === "verified") {
     const cutoff = Date.now() - 30 * 86400000;
     return list.filter((r) => r.priceVerifiedAt && new Date(r.priceVerifiedAt).getTime() >= cutoff);

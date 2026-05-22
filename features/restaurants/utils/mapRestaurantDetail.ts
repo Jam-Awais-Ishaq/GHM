@@ -21,7 +21,7 @@ export function mapRestaurantDetail(row: FilterListingRestaurant): RestaurantDet
     restaurantId: row.id,
     name: row.name,
     suburb: row.suburb,
-    address: row.suburb,
+    address: row.address ?? row.suburb,
     latitude: row.latitude,
     longitude: row.longitude,
     meals,

@@ -7,7 +7,7 @@ export function mapNearbyListingToRestaurant(row: NearbyListingDto): Restaurant 
     name: row.restaurantName,
     dish: row.dishName,
     price: row.price,
-    suburb: row.address,
+    suburb: row.suburb ?? row.address,
     address: row.address,
     imageUrl: row.image,
     position: { lat: row.latitude, lng: row.longitude },

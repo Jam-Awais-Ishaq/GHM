@@ -8,7 +8,11 @@ import { createListing } from "@/api/routes/listings.api";
 import { ApiError } from "@/api/inspector";
 import type { CuisineFilterId } from "@/features/restaurants/types/restaurant";
 import { cuisineFilterToApi } from "@/features/restaurants/utils/listingFilters";
-import { resolveDropFeedLocation } from "@/lib/maps/resolveDropFeedLocation";
+import {
+  DROP_FEED_SUBURB_ONLY_ERROR,
+  getDropFeedClientCoords,
+  isSuburbNameOnlyInput,
+} from "@/lib/maps/resolveDropFeedLocation";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
@@ -159,10 +163,15 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
       return;
     }
 
+    if (isSuburbNameOnlyInput(suburb)) {
+      setError(DROP_FEED_SUBURB_ONLY_ERROR);
+      return;
+    }
+
     void (async () => {
       setSubmitting(true);
       try {
-        const { coords } = await resolveDropFeedLocation(suburb);
+        const coords = await getDropFeedClientCoords();
         const formData = new FormData();
         formData.append("restaurantName", restaurantName.trim());
         formData.append("suburb", suburb.trim());
@@ -281,7 +290,7 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
                   name="suburb"
                   type="text"
                   autoComplete="street-address"
-                  placeholder="West End or 8 Bent St, Toowong…"
+                  placeholder="e.g. 735 Beams Rd, Carseldine QLD 4034"
                   value={suburb}
                   onChange={(e) => setSuburb(e.target.value)}
                   className={fieldClass}

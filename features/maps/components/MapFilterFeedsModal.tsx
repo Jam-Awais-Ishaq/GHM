@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Star, X } from "lucide-react";
+import { Check, Flame, Star, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -34,8 +34,9 @@ const CUISINE_CHIPS: { id: CuisineFilterId; label: string }[] = [
 const SHOW_ROWS: {
   id: Exclude<ShowOnlyFeedsId, "all">;
   title: string;
-  kind: "verified" | "star";
+  kind: "flame" | "verified" | "star";
 }[] = [
+  { id: "hotDeals", title: "Hot Deals (live specials)", kind: "flame" },
   { id: "verified", title: "Price verified in last 30 days", kind: "verified" },
   { id: "top50", title: "Top rated (vote score 50+)", kind: "star" },
 ];
@@ -58,7 +59,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "whitespace-nowrap rounded-2xl px-3 py-2 text-[13px] font-semibold leading-none tracking-tight transition-colors",
+        "whitespace-nowrap rounded-2xl px-3 py-2 text-[13px] font-semibold leading-none tracking-tight transition-colors max-sm:px-2.5 max-sm:py-1.5 max-sm:text-[12px]",
         active
           ? "text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
           : "text-neutral-700 hover:bg-neutral-200/85 hover:text-neutral-800",
@@ -70,7 +71,21 @@ function FilterChip({
   );
 }
 
-function ShowOnlyRowIcon({ kind, selected }: { kind: "verified" | "star"; selected: boolean }) {
+function ShowOnlyRowIcon({ kind, selected }: { kind: "flame" | "verified" | "star"; selected: boolean }) {
+  if (kind === "flame") {
+    return (
+      <Flame
+        className="h-[19px] w-[19px] shrink-0"
+        strokeWidth={2.35}
+        style={
+          selected
+            ? { color: ACCENT, fill: "rgba(255, 87, 34, 0.22)" }
+            : { color: "#EA580C", fill: "rgba(234, 88, 12, 0.15)" }
+        }
+        aria-hidden
+      />
+    );
+  }
   if (kind === "verified") {
     if (selected) {
       return (
@@ -107,7 +122,7 @@ function ShowOnlyRow({
   onClick,
 }: {
   title: string;
-  kind: "verified" | "star";
+  kind: "flame" | "verified" | "star";
   selected: boolean;
   onClick: () => void;
 }) {
@@ -116,7 +131,7 @@ function ShowOnlyRow({
       type="button"
       onClick={onClick}
         className={cn(
-          "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-[background-color,border-color,box-shadow] duration-150 [@media(max-height:640px)]:py-2.5",
+          "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-[background-color,border-color,box-shadow] duration-150 max-sm:gap-2.5 max-sm:px-3 max-sm:py-2.5 [@media(max-height:640px)]:py-2.5",
         selected
           ? "shadow-[0_1px_0_rgba(0,0,0,0.03)]"
           : "border-neutral-200 bg-white hover:border-neutral-300/90 hover:bg-neutral-50/60",
@@ -131,7 +146,13 @@ function ShowOnlyRow({
       }
     >
       <ShowOnlyRowIcon kind={kind} selected={selected} />
-      <span className="flex-1 text-left text-[15px] font-semibold leading-snug tracking-[-0.01em] text-neutral-900">
+      <span
+        className={cn(
+          "flex-1 text-left text-[15px] font-semibold leading-snug tracking-[-0.01em] max-sm:text-[14px]",
+          !(kind === "flame" && selected) && "text-neutral-900",
+        )}
+        style={kind === "flame" && selected ? { color: ACCENT } : undefined}
+      >
         {title}
       </span>
       <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
@@ -244,7 +265,7 @@ export function MapFilterFeedsModal({
         type="button"
         aria-hidden
         tabIndex={-1}
-        className="fixed inset-0 z-[200] bg-neutral-950/10 animate-[ghm-backdrop-in_0.2s_ease-out] motion-reduce:animate-none"
+        className="fixed inset-0 z-[200] bg-neutral-950/10 animate-[ghm-backdrop-in_0.2s_ease-out] motion-reduce:animate-none max-sm:bg-neutral-950/40"
         onClick={onClose}
       />
 
@@ -253,41 +274,56 @@ export function MapFilterFeedsModal({
         aria-modal="true"
         aria-labelledby="filter-feeds-title"
         className={cn(
-          "fixed z-[210] flex w-[min(25rem,calc(100vw-1.5rem))] max-w-[25rem] flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-[0_8px_40px_rgba(0,0,0,0.12),0_2px_12px_rgba(0,0,0,0.05)]",
-          "max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)]",
-          "max-sm:left-1/2 max-sm:top-1/2 max-sm:-translate-x-1/2 max-sm:-translate-y-1/2",
-          "max-sm:motion-safe:animate-[ghm-backdrop-in_0.22s_ease-out] max-sm:motion-reduce:animate-none",
+          "fixed z-[210] flex flex-col overflow-hidden bg-white",
+          /* Mobile: bottom sheet */
+          "max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none",
+          "max-sm:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)))]",
+          "max-sm:rounded-t-[1.75rem] max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:border-t max-sm:border-neutral-200/80",
+          "max-sm:shadow-[0_-8px_40px_rgba(0,0,0,0.12),0_-2px_12px_rgba(0,0,0,0.06)]",
+          "max-sm:motion-safe:animate-[ghm-sheet-from-bottom_0.32s_cubic-bezier(0.22,1,0.36,1)_both] max-sm:motion-reduce:animate-none",
+          /* Desktop: floating panel */
+          "sm:w-[min(25rem,calc(100vw-1.5rem))] sm:max-w-[25rem]",
+          "sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)]",
+          "sm:rounded-3xl sm:border sm:border-neutral-200/80",
+          "sm:shadow-[0_8px_40px_rgba(0,0,0,0.12),0_2px_12px_rgba(0,0,0,0.05)]",
           "sm:left-[max(1.25rem,env(safe-area-inset-left))] sm:right-auto sm:top-[max(1.5rem,calc(env(safe-area-inset-top)+1rem))] sm:h-auto sm:translate-none",
           "sm:motion-safe:animate-[ghm-filter-panel-from-left_0.28s_cubic-bezier(0.22,1,0.36,1)_both] sm:motion-reduce:animate-none",
         )}
         style={desktopPanelStyle}
       >
-        <header className="relative shrink-0 px-6 pb-4 pt-5 [@media(max-height:640px)]:pb-3 [@media(max-height:640px)]:pt-4">
+        <div
+          className="hidden max-sm:flex shrink-0 justify-center pt-2.5"
+          aria-hidden
+        >
+          <span className="h-1 w-10 rounded-full bg-neutral-300" />
+        </div>
+
+        <header className="relative shrink-0 px-6 pb-4 pt-5 max-sm:px-4 max-sm:pb-3 max-sm:pt-2 [@media(max-height:640px)]:pb-3 [@media(max-height:640px)]:pt-4 sm:pt-5">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200/90 hover:text-neutral-700"
+            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200/90 hover:text-neutral-700 max-sm:hidden"
             aria-label="Close filters"
           >
             <X className="h-[15px] w-[15px]" strokeWidth={2} />
           </button>
           <h2
             id="filter-feeds-title"
-            className="pr-10 text-[26px] font-bold leading-[1.15] tracking-[-0.025em] text-neutral-900"
+            className="pr-10 text-[26px] font-bold leading-[1.15] tracking-[-0.025em] text-neutral-900 max-sm:pr-0 max-sm:text-[22px]"
           >
             Filter feeds
           </h2>
-          <p className="mt-1 text-[14px] font-normal leading-snug text-neutral-500">
+          <p className="mt-1 text-[14px] font-normal leading-snug text-neutral-500 max-sm:text-[13px]">
             {"Spoiler: it's cheap."}
           </p>
         </header>
 
-        <div className="flex shrink-0 flex-col gap-5 overflow-hidden px-6 pb-2 [@media(max-height:700px)]:gap-4 [@media(max-height:640px)]:gap-3">
+        <div className="ghm-scrollbar-hidden flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-2 max-sm:gap-4 max-sm:px-4 sm:flex-none sm:shrink-0 sm:overflow-hidden [@media(max-height:700px)]:gap-4 [@media(max-height:640px)]:gap-3">
           <section>
-            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400 max-sm:mb-2 max-sm:text-[9px]">
               MAX PRICE
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-nowrap gap-2 overflow-x-auto">
               {priceChips.map((chip) => (
                 <FilterChip
                   key={chip.id}
@@ -301,7 +337,7 @@ export function MapFilterFeedsModal({
           </section>
 
           <section>
-            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400 max-sm:mb-2 max-sm:text-[9px]">
               CUISINE
             </p>
             <div className="flex flex-wrap gap-2">
@@ -318,10 +354,10 @@ export function MapFilterFeedsModal({
           </section>
 
           <section>
-            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400 max-sm:mb-2 max-sm:text-[9px]">
               SHOW ONLY
             </p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 max-sm:gap-1.5">
               {SHOW_ROWS.map(({ id, title, kind }) => (
                 <ShowOnlyRow
                   key={id}
@@ -335,14 +371,14 @@ export function MapFilterFeedsModal({
           </section>
         </div>
 
-        <footer className="shrink-0 px-6 pb-6 pt-4 max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <footer className="shrink-0 border-t border-neutral-100 px-6 pb-6 pt-4 max-sm:px-4 max-sm:pt-3 max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:border-t-0">
           <button
             type="button"
             onClick={() => {
               onApply({ price: draftPrice, cuisine: draftCuisine, show: draftShow });
               onClose();
             }}
-            className="flex h-12 w-full items-center justify-center rounded-2xl text-[15px] font-semibold leading-snug tracking-[-0.01em] text-white shadow-[0_4px_14px_rgba(255,87,34,0.38)] transition hover:brightness-[1.03] active:scale-[0.99]"
+            className="flex h-12 w-full items-center justify-center rounded-2xl text-[15px] font-semibold leading-snug tracking-[-0.01em] text-white shadow-[0_4px_14px_rgba(255,87,34,0.38)] transition hover:brightness-[1.03] active:scale-[0.99] max-sm:h-11 max-sm:text-[14px]"
             style={{ backgroundColor: ACCENT }}
           >
             {countLoading ? "Loading…" : `Show ${count} ${count === 1 ? "Feed" : "Feeds"}`}
