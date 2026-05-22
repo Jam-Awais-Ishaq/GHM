@@ -22,7 +22,7 @@ import type { RestaurantWithDistance } from "@/features/restaurants/types/restau
 import { restaurantToSavedPlace } from "@/lib/saved/savedPlaces";
 import { formatDistanceKm } from "@/features/restaurants/utils/distance";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
-import { formatRelativeDay } from "@/lib/utils/formatDate";
+import { formatPriceVerifiedLabel } from "@/lib/utils/formatDate";
 import { cn } from "@/lib/utils/cn";
 
 const ACCENT = "#FF5722";
@@ -61,9 +61,9 @@ export function MapRestaurantSidePanel({
     distRaw <= MAX_DISPLAY_DISTANCE_KM
       ? formatDistanceKm(distRaw, r.distanceIsDriving ? "drive" : "straight")
       : null;
-  const verified = r.priceVerifiedAt
-    ? `Price verified ${formatRelativeDay(new Date(r.priceVerifiedAt))}`
-    : "Price not yet verified";
+  const verified = formatPriceVerifiedLabel(
+    r.createdAt ?? r.priceVerifiedAt ?? new Date().toISOString(),
+  );
   const featured = r.isFeatured || r.isTopRated || r.isHotDeal;
   const docked = anchor != null;
 

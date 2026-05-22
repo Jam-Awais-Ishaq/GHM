@@ -6,7 +6,11 @@ import { createPortal } from "react-dom";
 
 import { createListing } from "@/api/routes/listings.api";
 import { ApiError } from "@/api/inspector";
-import type { CuisineFilterId } from "@/features/restaurants/types/restaurant";
+import {
+  DropFeedLocationPicker,
+  type DropFeedReverseGeocodeResult,
+} from "@/features/maps/components/DropFeedLocationPicker";
+import type { CuisineFilterId, LatLng } from "@/features/restaurants/types/restaurant";
 import { cuisineFilterToApi } from "@/features/restaurants/utils/listingFilters";
 import {
   DROP_FEED_SUBURB_ONLY_ERROR,
@@ -75,7 +79,9 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
   const titleId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [restaurantName, setRestaurantName] = useState("");
-  const [suburb, setSuburb] = useState("");
+  const [location, setLocation] = useState("");
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [pinnedCoords, setPinnedCoords] = useState<LatLng | null>(null);
   const [price, setPrice] = useState("");
   const [dish, setDish] = useState("");
   const [cuisine, setCuisine] = useState<Exclude<CuisineFilterId, "all">>("vietnamese");
@@ -111,7 +117,9 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
   useEffect(() => {
     if (!open) {
       setRestaurantName("");
-      setSuburb("");
+      setLocation("");
+      setLocationPickerOpen(false);
+      setPinnedCoords(null);
       setPrice("");
       setDish("");
       setCuisine("vietnamese");
@@ -172,7 +180,8 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
       return;
     }
 
-    if (isSuburbNameOnlyInput(suburb)) {
+    const fullAddress = location.trim();
+    if (isSuburbNameOnlyInput(fullAddress)) {
       setError(DROP_FEED_SUBURB_ONLY_ERROR);
       return;
     }
@@ -180,15 +189,19 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
     void (async () => {
       setSubmitting(true);
       try {
-        const coords = await getDropFeedClientCoords();
+        const fallbackCoords = await getDropFeedClientCoords();
+        const coords = pinnedCoords ?? fallbackCoords;
         const formData = new FormData();
         formData.append("restaurantName", restaurantName.trim());
-        formData.append("suburb", suburb.trim());
+        formData.append("suburb", fullAddress);
         formData.append("dishName", dish.trim());
         formData.append("cuisine", cuisineFilterToApi(cuisine) ?? cuisine);
         formData.append("price", String(priceNum));
         formData.append("latitude", String(coords.lat));
         formData.append("longitude", String(coords.lng));
+        if (pinnedCoords) {
+          formData.append("pinnedLocation", "true");
+        }
         formData.append("image", photoFile);
 
         if (dealTimerEnabled) {
@@ -290,18 +303,23 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
 
             <div className="grid grid-cols-[minmax(0,1fr)_min(7.25rem,30%)] gap-3 max-[380px]:grid-cols-1">
               <div className="min-w-0">
-                <label htmlFor="drop-suburb" className={labelClass}>
+                <label htmlFor="drop-location" className={labelClass}>
                   Suburb or address
                   <RequiredMark />
                 </label>
                 <input
-                  id="drop-suburb"
+                  id="drop-location"
                   name="suburb"
                   type="text"
                   autoComplete="street-address"
                   placeholder="e.g. 735 Beams Rd, Carseldine QLD 4034"
-                  value={suburb}
-                  onChange={(e) => setSuburb(e.target.value)}
+                  value={location}
+                  onFocus={() => setLocationPickerOpen(true)}
+                  onClick={() => setLocationPickerOpen(true)}
+                  onChange={(e) => {
+                    setLocation(e.target.value);
+                    setPinnedCoords(null);
+                  }}
                   className={fieldClass}
                   required
                 />
@@ -324,6 +342,17 @@ export function DropFeedModal({ open, onClose }: DropFeedModalProps) {
                 />
               </div>
             </div>
+
+            <DropFeedLocationPicker
+              open={locationPickerOpen}
+              pin={pinnedCoords}
+              onPinChange={(_coords, resolved: DropFeedReverseGeocodeResult) => {
+                setPinnedCoords({ lat: resolved.lat, lng: resolved.lng });
+                setLocation(resolved.address);
+                setError(null);
+              }}
+              className="-mx-4 w-[calc(100%+2rem)] max-w-none rounded-none border-x-0 sm:-mx-6 sm:w-[calc(100%+3rem)]"
+            />
 
             <div>
               <label htmlFor="drop-dish" className={labelClass}>

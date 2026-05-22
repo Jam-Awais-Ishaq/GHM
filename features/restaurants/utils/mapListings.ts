@@ -1,8 +1,5 @@
 import type { FilterListingRestaurant, ListingMeal } from "@/api/types/listings";
-import {
-  TOP_RATED_CHIP_MIN_NET_SCORE,
-  TOP_RATED_MIN_VOTE_COUNT,
-} from "@/constants/limits";
+import { TOP_RATED_CHIP_MIN_NET_SCORE } from "@/constants/limits";
 import type { Restaurant } from "@/features/restaurants/types/restaurant";
 import { isMealFeaturedActive } from "@/features/restaurants/utils/featuredMeal";
 import { mealHasActiveHotDeal } from "@/features/restaurants/utils/hotDeal";
@@ -71,14 +68,14 @@ export function mapListingRowsToRestaurants(
       imageUrl: meal.image,
       position: { lat: r.latitude, lng: r.longitude },
       netScore: r.netScore ?? 0,
+      popularityScore: r.popularityScore,
       voteCount: r.voteCount ?? 0,
-      isTopRated:
-        (r.voteCount ?? 0) >= TOP_RATED_MIN_VOTE_COUNT ||
-        (r.netScore ?? 0) >= TOP_RATED_CHIP_MIN_NET_SCORE,
+      isTopRated: (r.netScore ?? 0) >= TOP_RATED_CHIP_MIN_NET_SCORE,
       worthIt: 0,
       overrated: 0,
       isHotDeal: hasHotDeal,
       isFeatured: isMealFeaturedActive(meal),
+      createdAt: meal.createdAt,
     });
   }
 

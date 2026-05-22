@@ -15,6 +15,7 @@ export type ListingMeal = {
   price: number;
   image: string | null;
   status: string;
+  createdAt?: string;
   isFeatured?: boolean;
   featuredUntil?: string | null;
   hotDeals?: ListingHotDeal[];
@@ -33,6 +34,8 @@ export type FilterListingRestaurant = {
   longitude: number | null;
   /** Vote net score from ranking (Top Rated filter). */
   netScore?: number;
+  /** Restaurant popularity score from ranking (Top Rated filter). */
+  popularityScore?: number;
   /** Total votes (up + down) from ranking. */
   voteCount?: number;
   meals: FilterListingMeal[];

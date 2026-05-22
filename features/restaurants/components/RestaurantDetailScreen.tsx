@@ -15,6 +15,7 @@ import {
   mealHasActiveHotDeal,
 } from "@/features/restaurants/utils/hotDeal";
 import { formatPriceCompact } from "@/lib/utils/formatCurrency";
+import { formatPriceVerifiedLabel } from "@/lib/utils/formatDate";
 import { cn } from "@/lib/utils/cn";
 
 type RestaurantDetailScreenProps = {
@@ -137,7 +138,7 @@ export function RestaurantDetailScreen({
         </div>
 
         <p className="mt-4 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700 shadow-sm">
-          ✓ Price not yet verified
+          ✓ {formatPriceVerifiedLabel(selectedMeal.createdAt ?? new Date().toISOString())}
         </p>
 
         <MealVoteCards

@@ -11,6 +11,7 @@ export type NearbyListingDto = {
   price: number;
   image: string | null;
   isFeatured?: boolean;
+  createdAt: string;
 };
 
 export type NearbyListingsResponse = {

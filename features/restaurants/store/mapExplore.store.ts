@@ -4,7 +4,10 @@ import { LOCATION_SEARCH_ALIASES } from "@/constants/locationAliases";
 import {
   SEARCH_LOCATION_RADIUS_KM,
   TOP_RATED_CHIP_MIN_NET_SCORE,
+  TOP_RATED_FILTER_MIN_POPULARITY_SCORE,
 } from "@/constants/limits";
+import { getStoredPopularityNetScore } from "@/lib/rankings/restaurantPopularityStorage";
+import { filterTopRatedNavbarRestaurants } from "@/features/restaurants/utils/mapRankedRestaurant";
 import {
   filterRestaurantsToTopRatedLeaderboard,
   getTopRatedRestaurantIdSet,
@@ -124,12 +127,13 @@ function applyPriceFilter(list: Restaurant[], activePriceFilter: PriceFilterId):
   switch (activePriceFilter) {
     case "top": {
       const topIds = getTopRatedRestaurantIdSet();
-      if (topIds.size > 0) {
-        return filterRestaurantsToTopRatedLeaderboard(list, topIds);
-      }
-      return list.filter(
-        (r) => r.isTopRated || r.netScore >= TOP_RATED_CHIP_MIN_NET_SCORE,
-      );
+      const ranked =
+        topIds.size > 0
+          ? filterRestaurantsToTopRatedLeaderboard(list, topIds)
+          : list.filter(
+              (r) => r.isTopRated || r.netScore >= TOP_RATED_CHIP_MIN_NET_SCORE,
+            );
+      return filterTopRatedNavbarRestaurants(ranked);
     }
     case "u15":
       return list.filter((r) => r.price <= 15);
@@ -169,8 +173,17 @@ function applyShowOnlyFilter(list: Restaurant[], mode: ShowOnlyFeedsId): Restaur
     const cutoff = Date.now() - 30 * 86400000;
     return list.filter((r) => r.priceVerifiedAt && new Date(r.priceVerifiedAt).getTime() >= cutoff);
   }
-  const topIds = getTopRatedRestaurantIdSet();
-  return filterRestaurantsToTopRatedLeaderboard(list, topIds);
+  if (mode === "top50") {
+    return list.filter((r) => {
+      const rid = Number(r.restaurantId ?? r.id);
+      const score =
+        r.popularityScore ??
+        (Number.isFinite(rid) ? getStoredPopularityNetScore(rid) : null) ??
+        r.netScore;
+      return score >= TOP_RATED_FILTER_MIN_POPULARITY_SCORE;
+    });
+  }
+  return list;
 }
 
 export function matchRestaurantsBySearchQuery(list: Restaurant[], searchQuery: string): Restaurant[] {
@@ -193,8 +206,7 @@ export function filterRestaurants(
     activePriceFilter === "u15" ||
     activePriceFilter === "u12" ||
     activePriceFilter === "u8" ||
-    activePriceFilter === "u5" ||
-    activePriceFilter === "top";
+    activePriceFilter === "u5";
   const cuisineFromApi = activeCuisine !== "all" && priceFromApi;
 
   let next = priceFromApi ? list : applyPriceFilter(list, activePriceFilter);
@@ -202,7 +214,7 @@ export function filterRestaurants(
     activeCuisine === "all" || cuisineFromApi
       ? next
       : applyCuisineFilter(next, activeCuisine);
-  if (showOnlyFeeds === "hotDeals" || showOnlyFeeds === "top50") {
+  if (showOnlyFeeds === "hotDeals") {
     next = applyShowOnlyFilter(next, showOnlyFeeds);
   } else if (!showOnlyHandledByApi && showOnlyFeeds !== "all") {
     next = applyShowOnlyFilter(next, showOnlyFeeds);

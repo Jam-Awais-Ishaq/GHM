@@ -6,6 +6,7 @@ export type RestaurantMealDetail = {
   price: number;
   cuisine: string | null;
   imageUrl: string | null;
+  createdAt?: string;
   isHotDeal: boolean;
   hotDeals: ListingHotDeal[];
 };

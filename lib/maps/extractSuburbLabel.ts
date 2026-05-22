@@ -5,7 +5,7 @@ const STREET_WORD =
   /\b(rd|road|st|street|ave|avenue|drive|dr|way|blvd|boulevard|parade|pde|court|ct|lane|ln|crescent|cres|highway|hwy|terrace|tce|shop|unit|suite|level|lot)\b/i;
 
 function titleCaseSuburb(name: string): string {
-  return name
+  return String(name ?? "")
     .trim()
     .split(/\s+/)
     .filter(Boolean)
@@ -13,9 +13,9 @@ function titleCaseSuburb(name: string): string {
     .join(" ");
 }
 
-/** Display suburb from full address stored in DB (or legacy suburb-only text). */
+/** Display suburb from a full AU address string (matches backend helper). */
 export function extractSuburbLabel(storedAddress: string): string {
-  const t = storedAddress.trim();
+  const t = String(storedAddress ?? "").trim();
   if (!t) return "";
 
   const parts = t.split(",").map((p) => p.trim()).filter(Boolean);

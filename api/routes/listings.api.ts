@@ -14,7 +14,7 @@ export type FilterListingsParams = {
   topRated?: boolean;
   hotDeals?: boolean;
   priceVerified?: boolean;
-  /** Filter feeds “Top rated” — minimum total votes (up + down). */
+  /** @deprecated Filter feeds top rated uses popularity score on the server. */
   minVotes?: number;
   lat?: number;
   lng?: number;

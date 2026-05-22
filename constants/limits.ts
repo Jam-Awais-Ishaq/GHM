@@ -16,11 +16,14 @@ export const NEAR_BRISBANE_MAX_KM = 220;
 /** When a place geocodes, include pins within this radius (km) in search results (union with text). */
 export const SEARCH_LOCATION_RADIUS_KM = 12;
 
-/** Filter feeds modal “Top rated” — minimum total votes (up + down). */
-export const TOP_RATED_MIN_VOTE_COUNT = 5;
+/** Filter feeds modal “Top rated” — minimum restaurant popularity score. */
+export const TOP_RATED_FILTER_MIN_POPULARITY_SCORE = 50;
 
 /** Map navbar “Top Rated” chip — ranking net score (show places with positive votes). */
 export const TOP_RATED_CHIP_MIN_NET_SCORE = 1;
 
 /** Popularity leaderboard rows cached for map Top rated filter. */
 export const TOP_RATED_LEADERBOARD_LIMIT = 50;
+
+/** Map navbar “Top Rated” — server ranking radius around search centre (km). */
+export const TOP_RATED_MAP_RADIUS_KM = NEARBY_RADIUS_KM;

@@ -11,6 +11,7 @@ export function mapRestaurantDetail(row: FilterListingRestaurant): RestaurantDet
       price: m.price,
       cuisine: m.cuisine,
       imageUrl: m.image,
+      createdAt: m.createdAt,
       isHotDeal: mealHasActiveHotDeal(m),
       hotDeals: m.hotDeals ?? [],
     }));

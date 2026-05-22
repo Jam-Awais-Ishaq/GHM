@@ -16,6 +16,7 @@ export function mapNearbyListingToRestaurant(row: NearbyListingDto): Restaurant 
     overrated: 0,
     isHotDeal: false,
     isFeatured: Boolean(row.isFeatured),
+    createdAt: row.createdAt,
   };
 }
 

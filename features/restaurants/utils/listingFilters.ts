@@ -9,25 +9,24 @@ import type {
 /** Filter feeds modal SHOW ONLY → `/api/listings/filter` query flags. */
 export function showOnlyFeedsToApi(
   show: ShowOnlyFeedsId,
-): Pick<FilterListingsParams, "hotDeals" | "priceVerified" | "topRated" | "minVotes"> {
+): Pick<FilterListingsParams, "hotDeals" | "priceVerified" | "topRated"> {
   switch (show) {
     case "hotDeals":
       return { hotDeals: true };
     case "verified":
       return { priceVerified: true };
     case "top50":
-      return {};
+      return { topRated: true };
     default:
       return {};
   }
 }
 
-/** SHOW ONLY flags for listings API (top rated uses localStorage leaderboard). */
+/** SHOW ONLY flags for listings API (`top50` adds `topRated` + lat/lng in `fetchMapListings`). */
 export function showOnlyFeedsToListingsApi(
   show: ShowOnlyFeedsId,
 ): Pick<FilterListingsParams, "hotDeals" | "priceVerified"> {
-  const all = showOnlyFeedsToApi(show);
-  const { hotDeals, priceVerified } = all;
+  const { hotDeals, priceVerified } = showOnlyFeedsToApi(show);
   return {
     ...(hotDeals ? { hotDeals: true } : {}),
     ...(priceVerified ? { priceVerified: true } : {}),

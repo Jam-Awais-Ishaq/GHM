@@ -43,6 +43,8 @@ export type Restaurant = {
   imageUrl?: string | null;
   position: LatLng;
   netScore: number;
+  /** Restaurant popularity score from ranking — filter feeds “Top rated (50+)”. */
+  popularityScore?: number;
   /** Total community votes (up + down) — Top rated filter. */
   voteCount?: number;
   worthIt: number;
@@ -52,6 +54,8 @@ export type Restaurant = {
   isFeatured?: boolean;
   isTopRated?: boolean;
   priceVerifiedAt?: string;
+  /** Meal `createdAt` from DB — used for “Price verified …” copy. */
+  createdAt?: string;
   communityNotes?: RestaurantCommunityNote[];
 };
 
