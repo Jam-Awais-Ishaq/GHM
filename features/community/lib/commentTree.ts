@@ -50,3 +50,20 @@ export function appendTopLevelComment(
 ): FeedPostComment[] {
   return [...comments, comment];
 }
+
+export type FlatFeedComment = {
+  comment: FeedPostComment;
+  isReply: boolean;
+};
+
+/** Top-level comments then their replies, for inline feed preview. */
+export function flattenFeedComments(comments: FeedPostComment[]): FlatFeedComment[] {
+  const out: FlatFeedComment[] = [];
+  for (const comment of comments) {
+    out.push({ comment, isReply: false });
+    for (const reply of comment.replies) {
+      out.push({ comment: reply, isReply: true });
+    }
+  }
+  return out;
+}

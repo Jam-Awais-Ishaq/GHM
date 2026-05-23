@@ -36,6 +36,7 @@ export default function CommunityPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [commentsPanelPost, setCommentsPanelPost] = useState<FeedPostCard | null>(null);
+  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [likingPostId, setLikingPostId] = useState<string | null>(null);
@@ -232,6 +233,10 @@ export default function CommunityPage() {
                 isSignedIn={isSignedIn}
                 canEdit={myUserId != null && post.authorUserId === myUserId}
                 onLike={() => handleLike(post.id)}
+                commentsExpanded={expandedCommentsPostId === post.id}
+                onCommentsToggle={() =>
+                  setExpandedCommentsPostId((prev) => (prev === post.id ? null : post.id))
+                }
                 onCommentsOpen={() => setCommentsPanelPost(post)}
                 onEditOpen={() => {
                   setEditingPostId(post.id);

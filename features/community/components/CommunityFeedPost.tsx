@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Ellipsis, MessageCircle, ThumbsUp } from "lucide-react";
 import { routes } from "@/config/routes";
+import { CommunityInlineComments } from "@/features/community/components/CommunityInlineComments";
 import type { FeedPostCard } from "@/features/community/lib/mapCommunityPost";
 import { PUBLIC_PAGE_ACCENT } from "@/components/layout/PublicListPageShell";
 import { cn } from "@/lib/utils/cn";
@@ -15,6 +16,8 @@ type CommunityFeedPostProps = {
   canEdit?: boolean;
   onLike: () => void;
   onCommentsOpen: () => void;
+  commentsExpanded?: boolean;
+  onCommentsToggle?: () => void;
   onEditOpen: () => void;
 };
 
@@ -26,6 +29,8 @@ export function CommunityFeedPost({
   canEdit = false,
   onLike,
   onCommentsOpen,
+  commentsExpanded = false,
+  onCommentsToggle,
   onEditOpen,
 }: CommunityFeedPostProps) {
   const loginHref = `${routes.login}?returnTo=${encodeURIComponent(routes.community)}`;
@@ -36,6 +41,14 @@ export function CommunityFeedPost({
       return;
     }
     onLike();
+  };
+
+  const handleCommentsClick = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches) {
+      onCommentsToggle?.();
+      return;
+    }
+    onCommentsOpen();
   };
 
   return (
@@ -109,14 +122,20 @@ export function CommunityFeedPost({
             </button>
             <button
               type="button"
-              onClick={onCommentsOpen}
-              className="inline-flex items-center gap-1.5 text-xs font-medium transition hover:text-neutral-700"
+              onClick={handleCommentsClick}
+              aria-expanded={commentsExpanded}
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs font-medium transition hover:text-neutral-700",
+                commentsExpanded && "text-[#FF5722]",
+              )}
               aria-label={`Comments · ${post.comments}`}
             >
               <MessageCircle className="h-4 w-4" strokeWidth={2} aria-hidden />
               {post.comments}
             </button>
           </div>
+
+          <CommunityInlineComments postId={post.id} open={commentsExpanded} />
         </div>
       </div>
     </article>
